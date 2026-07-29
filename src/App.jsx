@@ -52,6 +52,17 @@ const specs = [
   ['메인 이미지', '240 × 240px', '1개'],
   ['탭 이미지', '96 × 74px', '1개'],
   ['파일 설정', 'RGB · 72dpi 이상', '각 1MB 이하'],
+  ['애니메이션 GIF', '최대 3초 · 100프레임', '24개 · LOOP ∞'],
+]
+
+const filmAssets = [
+  stickerAssets.laugh,
+  stickerAssets.surprised,
+  stickerAssets.love,
+  stickerAssets.cry,
+  stickerAssets.angry,
+  stickerAssets.think,
+  stickerAssets.victory,
 ]
 
 const faqItems = [
@@ -158,7 +169,6 @@ function Generator({ mode, setMode }) {
           <div className="mode-row">
             <div>
               <strong>어떤 스티커를 만들까요?</strong>
-              <span>{mode === 'animated' ? '여러 프레임이 들어 있는 GIF로 만들어요' : '한 장의 투명 PNG로 만들어요'}</span>
             </div>
             <div className="mode-switch" role="group" aria-label="스티커 종류">
               <button type="button" className={mode === 'animated' ? 'active' : ''} onClick={() => setMode('animated')}>
@@ -276,7 +286,6 @@ function HeroVisual({ mode }) {
 
       <span className="floating-chip chip-a"><Icon name="check" size={14} /> 배경 제거</span>
       <span className="floating-chip chip-b"><Icon name="layers" size={14} /> OGQ 규격</span>
-      <span className="floating-chip chip-c"><i /> 24 STICKERS</span>
     </div>
   )
 }
@@ -288,7 +297,7 @@ function Faq() {
       {faqItems.map((item, index) => (
         <div className={`faq-item ${open === index ? 'open' : ''}`} key={item.question}>
           <button type="button" onClick={() => setOpen(open === index ? -1 : index)} aria-expanded={open === index}>
-            <span><em>{String(index + 1).padStart(2, '0')}</em>{item.question}</span>
+            <span>{item.question}</span>
             <i><Icon name="chevron" size={20} /></i>
           </button>
           <div className="faq-answer"><p>{item.answer}</p></div>
@@ -335,9 +344,8 @@ function App() {
           <div className="hero-glow glow-left" /><div className="hero-glow glow-right" />
           <div className="container hero-grid">
             <div className="hero-copy">
-              <div className="hero-kicker"><span><i /> NEW</span> 치지직 클립, 이제 스티커로 소장하세요</div>
+              <div className="hero-kicker">치지직 클립, 이제 스티커로 소장하세요</div>
               <h1>그 순간을,<br /><span>움직이는 스티커로.</span></h1>
-              <p className="hero-desc">치지직 클립 링크 하나면 충분해요.<br className="desktop-break" /> 웃긴 표정과 결정적 움직임을 찾아 네이버 OGQ 규격으로 완성해 드려요.</p>
               <div className="hero-points">
                 <span><Icon name="check" size={15} /> AI 하이라이트 포착</span>
                 <span><Icon name="check" size={15} /> 투명 배경 자동 처리</span>
@@ -349,24 +357,28 @@ function App() {
           </div>
         </section>
 
-        <div className="trust-strip" aria-label="지원 기능">
-          <div className="ticker-track">
-            {[0, 1].map((group) => (
-              <div className="ticker-group" key={group} aria-hidden={group === 1}>
-                <span>CHZZK CLIP</span><i />
-                <span>AI MOTION PICK</span><i />
-                <span>PNG / ANIMATED GIF</span><i />
-                <span>OGQ READY</span><i />
-                <span>3 SEC ANIMATION</span><i />
-              </div>
-            ))}
-          </div>
-        </div>
-
         <section className="how-section section-pad" id="how">
+          <div className="film-strip" aria-label="스티커 장면이 흐르는 영화 필름">
+            <div className="film-belt">
+              <div className="film-runner">
+                {[0, 1, 2].map((group) => (
+                  <div className="film-segment" key={group} aria-hidden={group !== 0}>
+                    {filmAssets.map((asset, index) => (
+                      <div className="film-cell" key={`${group}-${asset}`}>
+                        <div className="film-sprockets" aria-hidden="true"><i /><i /></div>
+                        <div className="film-frame">
+                          <img src={asset} alt={group === 0 ? `CLIPY 스티커 장면 ${index + 1}` : ''} />
+                        </div>
+                        <div className="film-sprockets" aria-hidden="true"><i /><i /></div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="container">
             <div className="section-heading reveal">
-              <span className="section-label">HOW IT WORKS</span>
               <h2>링크 한 줄이<br /><em>스티커 24개</em>가 되기까지</h2>
               <p>복잡한 영상 편집도, 어려운 규격 계산도 필요 없어요.</p>
             </div>
@@ -401,7 +413,6 @@ function App() {
         <section className="features-section section-pad" id="features">
           <div className="container">
             <div className="section-heading centered reveal">
-              <span className="section-label">BUILT FOR CREATORS</span>
               <h2>재미는 살리고,<br /><em>귀찮은 작업은 자동으로.</em></h2>
             </div>
             <div className="bento-grid">
@@ -421,7 +432,7 @@ function App() {
                 </div>
               </article>
               <article className="bento bento-guide reveal">
-                <div className="guide-top"><span className="bento-tag dark">OGQ GUIDE</span><span className="guide-status"><i /> ALL PASSED</span></div>
+                <div className="guide-top"><span className="bento-tag dark">OGQ GUIDE</span></div>
                 <h3>규격은 CLIPY가<br />알아서 챙길게요</h3>
                 <ul>
                   <li><span><Icon name="check" size={15} /></span><div><b>이미지 크기</b><small>740 × 640px</small></div></li>
@@ -443,7 +454,6 @@ function App() {
         <section className="spec-section section-pad" id="specs">
           <div className="container spec-layout">
             <div className="spec-copy reveal">
-              <span className="section-label">OGQ SPEC, CHECKED</span>
               <h2>완성되는 순간,<br /><em>업로드 준비 끝.</em></h2>
               <p>OGQ 크리에이터 스튜디오의 공개 제작 가이드를 기준으로 파일을 구성합니다.</p>
               <a href="https://creators.ogq.me/guides/contents/animated-sticker" target="_blank" rel="noreferrer">OGQ 공식 가이드 보기 <Icon name="arrow" size={17} /></a>
@@ -451,13 +461,12 @@ function App() {
             <div className="spec-panel reveal">
               <div className="spec-panel-head"><span>OUTPUT_SPEC.json</span><i /><i /><i /></div>
               <div className="spec-list">
-                {specs.map(([name, size, count], index) => (
+                {specs.map(([name, size, count]) => (
                   <div className="spec-row" key={name}>
-                    <span>{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><em>{size}</em><b>{count}</b>
+                    <strong>{name}</strong><em>{size}</em><b>{count}</b>
                   </div>
                 ))}
               </div>
-              <div className="animation-spec"><span><Icon name="motion" size={22} /></span><div><small>24 ANIMATED GIF FILES</small><strong>GIF마다 최대 3초 · 100프레임</strong></div><em>LOOP ∞</em></div>
             </div>
           </div>
         </section>
@@ -465,7 +474,6 @@ function App() {
         <section className="use-section section-pad">
           <div className="container">
             <div className="section-heading centered reveal">
-              <span className="section-label">MADE TO BE USED</span>
               <h2>채팅에서 바로 통하는<br /><em>리액션을 만들어요.</em></h2>
               <p>잘 쓰이는 스티커는 길게 설명하지 않아도 감정이 보여요.</p>
             </div>
@@ -487,7 +495,7 @@ function App() {
 
         <section className="faq-section section-pad" id="faq">
           <div className="container faq-layout">
-            <div className="faq-copy reveal"><span className="section-label">FAQ</span><h2>궁금한 건<br /><em>여기서 확인하세요.</em></h2><p>더 궁금한 내용이 있다면 언제든 알려주세요.</p><div className="faq-mascot"><img src={stickerAssets.think} alt="생각 중인 CLIPY 캐릭터" /></div></div>
+            <div className="faq-copy reveal"><h2>궁금한 건<br /><em>여기서 확인하세요.</em></h2><p>더 궁금한 내용이 있다면 언제든 알려주세요.</p><div className="faq-mascot"><img src={stickerAssets.think} alt="생각 중인 CLIPY 캐릭터" /></div></div>
             <Faq />
           </div>
         </section>
