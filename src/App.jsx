@@ -2,6 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 
 const SAMPLE_URL = 'https://chzzk.naver.com/clips/clipy-demo-2407'
 
+const stickerAssets = {
+  victory: '/assets/jelly-sticker.png',
+  laugh: '/assets/stickers/laugh.png',
+  surprised: '/assets/stickers/surprised.png',
+  love: '/assets/stickers/love.png',
+  cry: '/assets/stickers/cry.png',
+  angry: '/assets/stickers/angry.png',
+  think: '/assets/stickers/think.png',
+}
+
 function Icon({ name, size = 20, strokeWidth = 2, className = '' }) {
   const paths = {
     arrow: <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
@@ -196,7 +206,7 @@ function Generator({ mode, setMode }) {
             ))}
           </div>
           <div className="scan-preview">
-            <div className="scan-image"><img src="/assets/jelly-sticker.png" alt="분석 중인 스티커 캐릭터" /><i /></div>
+            <div className="scan-image"><img src={stickerAssets.surprised} alt="분석 중인 깜짝 반응 스티커" /><i /></div>
             <div className="scan-lines"><span /><span /><span /><span /><span /><span /><span /><span /></div>
           </div>
         </div>
@@ -242,7 +252,7 @@ function HeroVisual({ mode }) {
         <div className="clip-bar"><span><i /> CHZZK CLIP</span><small>00:03</small></div>
         <div className="clip-scene">
           <div className="clip-grid" />
-          <div className="clip-avatar"><img src="/assets/jelly-sticker.png" alt="" /></div>
+          <div className="clip-avatar"><img src={stickerAssets.angry} alt="" /></div>
           <span className="live-pill">LIVE MOMENT</span>
           <div className="timeline"><i /><i /><i /><i /><i /><i /><b /></div>
         </div>
@@ -398,15 +408,15 @@ function App() {
               <article className="bento bento-motion reveal">
                 <div className="bento-copy"><span className="bento-tag">MOTION</span><h3>움직임의 맛을<br />놓치지 않아요</h3><p>최대 3초 안에서 가장 분명한 동작을 골라 자연스럽게 반복되도록 다듬어요.</p></div>
                 <div className="motion-demo">
-                  {[0, 1, 2, 3].map((item) => <div key={item}><img src="/assets/jelly-sticker.png" alt="" /></div>)}
+                  {[stickerAssets.laugh, stickerAssets.surprised, stickerAssets.love, stickerAssets.victory].map((asset) => <div key={asset}><img src={asset} alt="" /></div>)}
                   <span><Icon name="play" size={17} /> LOOP 3.0s</span>
                 </div>
               </article>
               <article className="bento bento-cutout reveal">
                 <div className="bento-copy"><span className="bento-tag">CUT OUT</span><h3>배경은 깔끔하게,<br />캐릭터는 선명하게</h3></div>
                 <div className="cutout-demo">
-                  <div className="cut-before"><img src="/assets/jelly-sticker.png" alt="" /><span>BEFORE</span></div>
-                  <div className="cut-after"><img src="/assets/jelly-sticker.png" alt="" /><span>AFTER</span></div>
+                  <div className="cut-before"><img src={stickerAssets.angry} alt="" /><span>BEFORE</span></div>
+                  <div className="cut-after"><img src={stickerAssets.angry} alt="" /><span>AFTER</span></div>
                   <i><Icon name="arrow" size={19} /></i>
                 </div>
               </article>
@@ -422,7 +432,7 @@ function App() {
               <article className="bento bento-both reveal">
                 <div className="bento-copy"><span className="bento-tag">2 TYPES</span><h3>움직이는 것도,<br />멈춰있는 것도</h3><p>같은 클립에서 용도에 맞는 두 가지 버전을 만들 수 있어요.</p></div>
                 <div className="type-cards">
-                  <div><span>STATIC</span><img src="/assets/jelly-sticker.png" alt="정지형 스티커 예시" /><small>PNG</small></div>
+                  <div><span>STATIC</span><img src={stickerAssets.love} alt="하트 포즈의 정지형 스티커 예시" /><small>PNG</small></div>
                   <div className="moving"><span>ANIMATED GIF</span><img src="/assets/clipy-ogq-sticker-sample.gif" alt="여러 프레임이 포함된 움직이는 GIF 스티커 예시" /><small><i /> GIF · 21F</small></div>
                 </div>
               </article>
@@ -465,7 +475,7 @@ function App() {
                 <div className="chat-bubble"><span className="avatar a2">D</span><p><b>도토리묵</b>이 장면 스티커 각이다</p></div>
                 <div className="chat-bubble muted"><span className="avatar a3">M</span><p><b>민트단</b>나 벌써 저장함</p></div>
               </div>
-              <div className="chat-sticker"><span>NEW STICKER</span><img src="/assets/jelly-sticker.png" alt="채팅에 사용된 스티커" /><div className="reaction"><b>♥</b> 128</div></div>
+              <div className="chat-sticker"><span>NEW STICKER</span><img src={stickerAssets.laugh} alt="채팅에 사용된 폭소 스티커" /><div className="reaction"><b>♥</b> 128</div></div>
               <div className="chat-column right">
                 <div className="chat-bubble"><span className="avatar a4">R</span><p><b>라면먹자</b>방금 표정 뭐야 ㅋㅋ</p></div>
                 <div className="chat-bubble"><span className="avatar a5">P</span><p><b>피치소다</b>이거 어디서 받아요?</p></div>
@@ -477,7 +487,7 @@ function App() {
 
         <section className="faq-section section-pad" id="faq">
           <div className="container faq-layout">
-            <div className="faq-copy reveal"><span className="section-label">FAQ</span><h2>궁금한 건<br /><em>여기서 확인하세요.</em></h2><p>더 궁금한 내용이 있다면 언제든 알려주세요.</p><div className="faq-mascot"><img src="/assets/jelly-sticker.png" alt="CLIPY 캐릭터" /></div></div>
+            <div className="faq-copy reveal"><span className="section-label">FAQ</span><h2>궁금한 건<br /><em>여기서 확인하세요.</em></h2><p>더 궁금한 내용이 있다면 언제든 알려주세요.</p><div className="faq-mascot"><img src={stickerAssets.think} alt="생각 중인 CLIPY 캐릭터" /></div></div>
             <Faq />
           </div>
         </section>
@@ -489,7 +499,7 @@ function App() {
             <h2>웃고 넘긴 그 장면,<br />이제 <em>스티커로 남겨보세요.</em></h2>
             <p>치지직 클립 링크 하나로 시작할 수 있어요.</p>
             <a href="#make">지금 무료로 만들기 <Icon name="arrow" size={20} /></a>
-            <div className="cta-stickers"><img src="/assets/jelly-sticker.png" alt="" /><img src="/assets/jelly-sticker.png" alt="" /><img src="/assets/jelly-sticker.png" alt="" /></div>
+            <div className="cta-stickers"><img src={stickerAssets.cry} alt="" /><img src={stickerAssets.surprised} alt="" /><img src={stickerAssets.love} alt="" /></div>
           </div>
         </section>
       </main>
