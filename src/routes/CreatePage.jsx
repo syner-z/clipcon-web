@@ -4,10 +4,12 @@ import Icon from '../components/Icon.jsx'
 import SiteHeader from '../components/SiteHeader.jsx'
 import ClipUrlForm from '../components/ClipUrlForm.jsx'
 import { stickerAssets } from '../data.js'
-import { createClip, createSticker, downloadMedia, mediaUrl, pollJob } from '../api.js'
+import { ApiError, createClip, createSticker, downloadMedia, loginUrl, mediaUrl, pollJob } from '../api.js'
+import { useAuth } from '../auth.jsx'
 
 const MAX_SEGMENT = 5
 const MIN_SEGMENT = 0.5
+const PENDING_KEY = 'clipy:pending'
 
 const STAGE_TO_STEP = {
   downloading: 0,
@@ -38,7 +40,8 @@ const stickerFilename = ({ stickerUrl, emotion }) => {
 }
 
 export default function CreatePage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { user, loading: authLoading, refresh } = useAuth()
   const [url, setUrl] = useState(() => searchParams.get('url') ?? '')
   const [mode, setMode] = useState(searchParams.get('mode') === 'animated' ? 'animated' : 'static')
 
@@ -66,6 +69,39 @@ export default function CreatePage() {
       mountedRef.current = false
       pollAbortRef.current?.abort()
     }
+  }, [])
+
+  useEffect(() => {
+    const authError = searchParams.get('authError')
+    if (!authError) return
+
+    setError(authError === 'AUTH_FAILED'
+      ? '구글 로그인에 실패했어요. 다시 시도해 주세요.'
+      : '로그인을 완료하지 못했어요. 다시 시도해 주세요.')
+    const next = new URLSearchParams(searchParams)
+    next.delete('authError')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    let pending
+    try {
+      pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null')
+    } catch {
+      sessionStorage.removeItem(PENDING_KEY)
+      return
+    }
+    if (!pending?.clipId) return
+
+    sessionStorage.removeItem(PENDING_KEY)
+    setUrl(pending.url || '')
+    setClipId(pending.clipId)
+    setPreviewUrl(pending.previewUrl || null)
+    setDuration(Number(pending.duration) || 0)
+    setRange(pending.range || { start: 0, end: 0 })
+    setStickerStyle(pending.stickerStyle === 'original' ? 'original' : 'character')
+    setMode(pending.mode === 'animated' ? 'animated' : 'static')
+    setStatus('trimming')
   }, [])
 
   const activeStep = stage ? (STAGE_TO_STEP[stage] ?? 0) : 0
@@ -140,6 +176,24 @@ export default function CreatePage() {
 
   const handleConfirmTrim = async () => {
     if (!clipId) return
+    if (authLoading) return
+    if (!user) {
+      sessionStorage.setItem(PENDING_KEY, JSON.stringify({
+        url,
+        clipId,
+        previewUrl,
+        duration,
+        range,
+        stickerStyle,
+        mode,
+      }))
+      window.location.href = loginUrl('/create')
+      return
+    }
+    if (user.quotaRemaining <= 0) {
+      setError(`생성 한도 ${user.quotaLimit}회를 모두 사용했어요.`)
+      return
+    }
     setError('')
     setDownloadError('')
     setStatus('processing')
@@ -162,8 +216,12 @@ export default function CreatePage() {
       if (!mountedRef.current) return
       setResult(stickerResult)
       setStatus('complete')
+      await refresh()
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return
+      if (err instanceof ApiError && ['QUOTA_EXCEEDED', 'UNAUTHENTICATED'].includes(err.code)) {
+        await refresh()
+      }
       setError(err.message || '스티커 생성에 실패했어요.')
       setStatus('trimming')
     }
@@ -277,6 +335,19 @@ export default function CreatePage() {
                 </div>
                 <p className="trim-hint">최대 5초까지 선택할 수 있어요.</p>
 
+                <div className={`quota-note ${user?.quotaRemaining === 0 ? 'is-empty' : ''}`}>
+                  {authLoading ? (
+                    <span>로그인 상태를 확인하고 있어요.</span>
+                  ) : user ? (
+                    <>
+                      <span>남은 생성</span>
+                      <strong>{user.quotaRemaining} / {user.quotaLimit}회</strong>
+                    </>
+                  ) : (
+                    <span>생성 버튼을 누르면 Google 로그인 후 이어서 만들 수 있어요.</span>
+                  )}
+                </div>
+
                 <div className="mode-row">
                   <div><strong>어떻게 만들까요?</strong></div>
                   <div className="mode-switch" role="group" aria-label="스티커 스타일">
@@ -292,8 +363,8 @@ export default function CreatePage() {
                 {error && <p className="trim-error">{error}</p>}
 
                 <div className="trim-actions">
-                  <button type="button" className="trim-confirm" onClick={handleConfirmTrim}>
-                    이 구간으로 만들기 <Icon name="arrow" size={18} />
+                  <button type="button" className="trim-confirm" onClick={handleConfirmTrim} disabled={authLoading || user?.quotaRemaining === 0}>
+                    {user ? '이 구간으로 만들기' : 'Google 로그인하고 만들기'} <Icon name="arrow" size={18} />
                   </button>
                 </div>
               </div>
@@ -345,7 +416,7 @@ export default function CreatePage() {
                   <button type="button" className="download-btn" onClick={handleDownload} disabled={downloading}>
                     <Icon name="download" size={19} /> {downloading ? '다운로드 준비 중…' : '스티커 다운로드'}
                   </button>
-                  <button type="button" onClick={handleConfirmTrim}><Icon name="wand" size={18} /> 다시 만들기</button>
+                  <button type="button" onClick={handleConfirmTrim} disabled={user?.quotaRemaining === 0}><Icon name="wand" size={18} /> 다시 만들기</button>
                   <button type="button" onClick={reset}><Icon name="refresh" size={18} /> 다른 클립 만들기</button>
                 </div>
               </div>
