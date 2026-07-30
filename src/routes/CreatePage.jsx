@@ -4,7 +4,7 @@ import Icon from '../components/Icon.jsx'
 import SiteHeader from '../components/SiteHeader.jsx'
 import ClipUrlForm from '../components/ClipUrlForm.jsx'
 import { stickerAssets } from '../data.js'
-import { createClip, createSticker, mediaUrl, pollJob } from '../api.js'
+import { createClip, createSticker, downloadMedia, mediaUrl, pollJob } from '../api.js'
 
 const MAX_SEGMENT = 5
 const MIN_SEGMENT = 0.5
@@ -31,6 +31,12 @@ const STATUS_TO_WORKSPACE_STEP = {
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
+const stickerFilename = ({ stickerUrl, emotion }) => {
+  const ext = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(stickerUrl ?? '')?.[1] ?? 'png'
+  const label = (emotion ?? '').trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '')
+  return label ? `clipy-${label}.${ext}` : `clipy-sticker.${ext}`
+}
+
 export default function CreatePage() {
   const [searchParams] = useSearchParams()
   const [url, setUrl] = useState(() => searchParams.get('url') ?? '')
@@ -47,6 +53,8 @@ export default function CreatePage() {
   const [duration, setDuration] = useState(0)
   const [range, setRange] = useState({ start: 0, end: 0 })
   const [result, setResult] = useState(null)
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
 
   const pollAbortRef = useRef(null)
   const mountedRef = useRef(true)
@@ -133,6 +141,7 @@ export default function CreatePage() {
   const handleConfirmTrim = async () => {
     if (!clipId) return
     setError('')
+    setDownloadError('')
     setStatus('processing')
     setProgress(0)
     setStage(null)
@@ -160,6 +169,20 @@ export default function CreatePage() {
     }
   }
 
+  const handleDownload = async () => {
+    if (!result || downloading) return
+    setDownloadError('')
+    setDownloading(true)
+    try {
+      await downloadMedia(result.stickerUrl, stickerFilename(result))
+    } catch (err) {
+      if (!mountedRef.current) return
+      setDownloadError(err.message || '스티커를 내려받지 못했어요.')
+    } finally {
+      if (mountedRef.current) setDownloading(false)
+    }
+  }
+
   const reset = () => {
     pollAbortRef.current?.abort()
     setStatus('idle')
@@ -172,6 +195,8 @@ export default function CreatePage() {
     setDuration(0)
     setRange({ start: 0, end: 0 })
     setResult(null)
+    setDownloading(false)
+    setDownloadError('')
   }
 
   return (
@@ -315,10 +340,11 @@ export default function CreatePage() {
                     <small>{Math.round(result.bytes / 1024)}KB</small>
                   </div>
                 </div>
+                {downloadError && <p className="result-error">{downloadError}</p>}
                 <div className="result-actions">
-                  <a href={mediaUrl(result.stickerUrl)} download className="download-btn">
-                    <Icon name="download" size={19} /> 스티커 다운로드
-                  </a>
+                  <button type="button" className="download-btn" onClick={handleDownload} disabled={downloading}>
+                    <Icon name="download" size={19} /> {downloading ? '다운로드 준비 중…' : '스티커 다운로드'}
+                  </button>
                   <button type="button" onClick={handleConfirmTrim}><Icon name="wand" size={18} /> 다시 만들기</button>
                   <button type="button" onClick={reset}><Icon name="refresh" size={18} /> 다른 클립 만들기</button>
                 </div>

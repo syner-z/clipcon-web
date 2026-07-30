@@ -171,20 +171,23 @@ p, h1, h2, h3 { margin: 0; }
 .complete-copy > div { display: grid; gap: 2px; }
 .complete-copy strong { font: 400 19px/1.25 var(--nemony); }
 .complete-copy span { color: #8d95a3; font-size: 10px; }
-.result-box { margin-top: 15px; padding: 11px; display: flex; align-items: center; gap: 13px; border-radius: 11px; background: #17191c; border: 1px solid rgba(255,255,255,.07); }
-.result-sticker { width: 86px; height: 74px; position: relative; display: grid; place-items: center; border-radius: 8px; overflow: hidden; background-color: #30343a; background-image: linear-gradient(45deg,#3b3f46 25%,transparent 25%),linear-gradient(-45deg,#3b3f46 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#3b3f46 75%),linear-gradient(-45deg,transparent 75%,#3b3f46 75%); background-size: 14px 14px; background-position: 0 0,0 7px,7px -7px,-7px 0; }
-.result-sticker img { width: 68px; }
+.result-box { margin-top: 18px; padding: 18px 16px 16px; display: grid; justify-items: center; gap: 14px; border-radius: 14px; background: #17191c; border: 1px solid rgba(255,255,255,.07); }
+.result-sticker { width: 100%; max-width: 380px; aspect-ratio: 740 / 640; position: relative; display: grid; place-items: center; border-radius: 12px; overflow: hidden; background-color: #30343a; background-image: linear-gradient(45deg,#3b3f46 25%,transparent 25%),linear-gradient(-45deg,#3b3f46 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#3b3f46 75%),linear-gradient(-45deg,transparent 75%,#3b3f46 75%); background-size: 22px 22px; background-position: 0 0,0 11px,11px -11px,-11px 0; }
+.result-sticker img { width: 100%; height: 100%; object-fit: contain; }
 .result-sticker.is-animated img { animation: none; }
 .playing-badge { position: absolute; left: 5px; bottom: 5px; padding: 3px 5px; display: flex; align-items: center; gap: 3px; border-radius: 4px; background: #141517; color: var(--mint); font-size: 7px; font-weight: 850; }
 .playing-badge i { width: 4px; height: 4px; border-radius: 50%; background: var(--mint); animation: blink 1s infinite; }
-.result-meta { display: grid; gap: 3px; flex: 1; }
-.result-meta span { color: #8f97a5; font-size: 9px; }
-.result-meta strong { font-size: 13px; }
-.result-meta small { color: #69717f; font-size: 9px; }
+.result-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; }
+.result-meta span, .result-meta strong, .result-meta small { padding: 5px 10px; border-radius: 999px; background: #202327; border: 1px solid rgba(255,255,255,.06); }
+.result-meta span { color: var(--mint); font-size: 11px; font-weight: 800; }
+.result-meta strong { color: #dfe4ec; font-size: 11px; }
+.result-meta small { color: #838b98; font-size: 11px; }
+.result-error { margin-top: 12px; color: var(--danger); font-size: 11px; text-align: center; }
 .result-actions { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.result-actions a, .result-actions button { height: 42px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer; }
-.download-btn { grid-column: 1 / -1; color: #102019; background: var(--mint); }
-.result-actions button { color: #bdc4d0; background: #26292e; border: 1px solid rgba(255,255,255,.08); }
+.result-actions button { height: 42px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer; color: #bdc4d0; background: #26292e; border: 1px solid rgba(255,255,255,.08); }
+.result-actions .download-btn { grid-column: 1 / -1; height: 48px; font-size: 12px; color: #102019; background: var(--mint); border: 0; transition: background .2s, transform .2s; }
+.result-actions .download-btn:hover:not(:disabled) { background: var(--mint-soft); transform: translateY(-1px); }
+.result-actions .download-btn:disabled { cursor: progress; opacity: .65; transform: none; }
 
 .site-header nav.header-nav-end { margin: 0 0 0 auto; }
 
@@ -211,8 +214,8 @@ p, h1, h2, h3 { margin: 0; }
 .workspace-card .trim-video { max-height: 340px; }
 .workspace-card .scan-preview { height: 138px; grid-template-columns: 150px 1fr; }
 .workspace-card .scan-image img { width: 108px; }
-.workspace-card .result-sticker { width: 120px; height: 104px; }
-.workspace-card .result-sticker img { width: 96px; }
+.workspace-card .result-box { padding: 22px 20px 18px; }
+.workspace-card .result-sticker { max-width: 440px; }
 .workspace-card .result-actions { grid-template-columns: repeat(2, 1fr); }
 .workspace-note { margin-top: 26px; text-align: center; color: #555c67; font-size: 10px; }
 
