@@ -5,3 +5,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# 에이전트 도구가 만드는 세션 상태
+.omc/

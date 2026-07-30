@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
+import { createClip, createSticker, pollJob, mediaUrl } from './api.js'
 
 const SAMPLE_URL = 'https://chzzk.naver.com/clips/clipy-demo-2407'
+
+const MAX_SEGMENT = 5
+const MIN_SEGMENT = 0.5
+
+const STAGE_TO_STEP = {
+  downloading: 0,
+  encoding_preview: 0,
+  trimming: 1,
+  analyzing: 1,
+  capturing: 1,
+  generating: 2,
+  finalizing: 2,
+}
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 const stickerAssets = {
   victory: '/assets/jelly-sticker.png',
@@ -92,16 +108,32 @@ function Generator({ mode, setMode }) {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState('idle')
   const [progress, setProgress] = useState(0)
-  const [activeStep, setActiveStep] = useState(0)
+  const [stage, setStage] = useState(null)
   const [error, setError] = useState('')
-  const timers = useRef([])
+  const [stickerStyle, setStickerStyle] = useState('character')
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+  const [clipId, setClipId] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [duration, setDuration] = useState(0)
+  const [range, setRange] = useState({ start: 0, end: 0 })
+  const [result, setResult] = useState(null)
 
-  const startMaking = (event) => {
+  const pollAbortRef = useRef(null)
+  const mountedRef = useRef(true)
+  const videoRef = useRef(null)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      pollAbortRef.current?.abort()
+    }
+  }, [])
+
+  const activeStep = stage ? (STAGE_TO_STEP[stage] ?? 0) : 0
+
+  const startMaking = async (event) => {
     event?.preventDefault()
-    timers.current.forEach(clearTimeout)
-    timers.current = []
 
     if (!url.trim()) {
       setError('치지직 클립 주소를 입력해 주세요.')
@@ -122,46 +154,116 @@ function Generator({ mode, setMode }) {
     }
 
     setError('')
-    setStatus('processing')
-    setProgress(8)
-    setActiveStep(0)
+    setStatus('loading')
+    setProgress(0)
+    setStage(null)
 
-    const timeline = [
-      [560, 28, 1],
-      [1250, 52, 1],
-      [1950, 74, 2],
-      [2700, 92, 2],
-      [3400, 100, 3],
-    ]
+    const controller = new AbortController()
+    pollAbortRef.current = controller
 
-    timeline.forEach(([delay, value, step]) => {
-      timers.current.push(setTimeout(() => {
-        setProgress(value)
-        setActiveStep(step)
-        if (value === 100) {
-          timers.current.push(setTimeout(() => setStatus('complete'), 320))
-        }
-      }, delay))
+    try {
+      const { jobId } = await createClip(url.trim())
+      const clipResult = await pollJob(jobId, {
+        signal: controller.signal,
+        onProgress: (job) => {
+          if (!mountedRef.current) return
+          setProgress(job.progress ?? 0)
+          setStage(job.stage ?? null)
+        },
+      })
+      if (!mountedRef.current) return
+      setClipId(clipResult.clipId)
+      setPreviewUrl(clipResult.previewUrl)
+      setDuration(clipResult.duration)
+      const initialEnd = clamp(MAX_SEGMENT, MIN_SEGMENT, clipResult.duration || MAX_SEGMENT)
+      setRange({ start: 0, end: initialEnd })
+      setStatus('trimming')
+    } catch (err) {
+      if (controller.signal.aborted || !mountedRef.current) return
+      setError(err.message || '클립을 불러오지 못했어요.')
+      setStatus('idle')
+    }
+  }
+
+  const handleStartChange = (event) => {
+    const raw = Number(event.target.value)
+    setRange(({ end }) => {
+      let nextStart = clamp(raw, 0, duration)
+      nextStart = Math.min(nextStart, end - MIN_SEGMENT)
+      nextStart = Math.max(nextStart, 0)
+      let nextEnd = end
+      if (nextEnd - nextStart > MAX_SEGMENT) nextEnd = clamp(nextStart + MAX_SEGMENT, 0, duration)
+      if (nextEnd - nextStart > MAX_SEGMENT) nextStart = nextEnd - MAX_SEGMENT
+      return { start: nextStart, end: nextEnd }
     })
+    if (videoRef.current) videoRef.current.currentTime = raw
+  }
+
+  const handleEndChange = (event) => {
+    const raw = Number(event.target.value)
+    setRange(({ start }) => {
+      let nextEnd = clamp(raw, 0, duration)
+      nextEnd = Math.max(nextEnd, start + MIN_SEGMENT)
+      nextEnd = Math.min(nextEnd, duration)
+      let nextStart = start
+      if (nextEnd - nextStart > MAX_SEGMENT) nextStart = Math.max(0, nextEnd - MAX_SEGMENT)
+      if (nextEnd - nextStart > MAX_SEGMENT) nextEnd = nextStart + MAX_SEGMENT
+      return { start: nextStart, end: nextEnd }
+    })
+    if (videoRef.current) videoRef.current.currentTime = raw
+  }
+
+  const handleConfirmTrim = async () => {
+    if (!clipId) return
+    setError('')
+    setStatus('processing')
+    setProgress(0)
+    setStage(null)
+
+    const controller = new AbortController()
+    pollAbortRef.current = controller
+
+    try {
+      const { jobId } = await createSticker(clipId, { start: range.start, end: range.end, mode: stickerStyle })
+      const stickerResult = await pollJob(jobId, {
+        signal: controller.signal,
+        onProgress: (job) => {
+          if (!mountedRef.current) return
+          setProgress(job.progress ?? 0)
+          setStage(job.stage ?? null)
+        },
+      })
+      if (!mountedRef.current) return
+      setResult(stickerResult)
+      setStatus('complete')
+    } catch (err) {
+      if (controller.signal.aborted || !mountedRef.current) return
+      setError(err.message || '스티커 생성에 실패했어요.')
+      setStatus('trimming')
+    }
   }
 
   const reset = () => {
-    timers.current.forEach(clearTimeout)
+    pollAbortRef.current?.abort()
     setStatus('idle')
+    setUrl('')
+    setError('')
     setProgress(0)
-    setActiveStep(0)
+    setStage(null)
+    setClipId(null)
+    setPreviewUrl(null)
+    setDuration(0)
+    setRange({ start: 0, end: 0 })
+    setResult(null)
   }
 
   const isAnimated = mode === 'animated'
-  const resultAsset = isAnimated ? '/assets/clipy-ogq-sticker-sample.gif' : '/assets/clipy-ogq-sticker-sample.png'
-  const resultFilename = isAnimated ? 'CLIPY_SAMPLE_01.gif' : 'CLIPY_SAMPLE_01.png'
-  const resultDownloadName = isAnimated ? 'clipy-ogq-animated-sticker-sample.gif' : 'clipy-ogq-static-sticker-sample.png'
 
   return (
     <div className={`generator-card ${status}`} id="make">
       <div className="generator-topline">
         <span className="window-dots"><i /><i /><i /></span>
-        <span className="secure-note"><Icon name="shield" size={15} /> 클립은 저장하지 않아요</span>
+        <span className="secure-note"><Icon name="shield" size={15} /> 처리 후 바로 삭제해요</span>
       </div>
 
       {status === 'idle' && (
@@ -171,8 +273,8 @@ function Generator({ mode, setMode }) {
               <strong>어떤 스티커를 만들까요?</strong>
             </div>
             <div className="mode-switch" role="group" aria-label="스티커 종류">
-              <button type="button" className={mode === 'animated' ? 'active' : ''} onClick={() => setMode('animated')}>
-                <Icon name="motion" size={16} /> 움직이는
+              <button type="button" className={mode === 'animated' ? 'active' : ''} onClick={() => setMode('animated')} disabled title="움직이는 스티커는 곧 추가돼요">
+                <Icon name="motion" size={16} /> 움직이는 <em className="soon-chip">곧 추가돼요</em>
               </button>
               <button type="button" className={mode === 'static' ? 'active' : ''} onClick={() => setMode('static')}>
                 <Icon name="image" size={16} /> 멈춰있는
@@ -197,12 +299,73 @@ function Generator({ mode, setMode }) {
         </form>
       )}
 
+      {status === 'loading' && (
+        <div className="process-state" aria-live="polite">
+          <div className="process-head">
+            <div>
+              <span className="eyebrow">AI STICKER MAKER</span>
+              <h3>클립 미리보기를 준비하는 중</h3>
+            </div>
+            <strong>{progress}%</strong>
+          </div>
+          <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
+          <p className="loading-hint">치지직 서버에서 클립을 내려받고 미리보기를 만들고 있어요.</p>
+        </div>
+      )}
+
+      {status === 'trimming' && (
+        <div className="trim-state" aria-live="polite">
+          <div className="trim-video-wrap">
+            <video ref={videoRef} key={previewUrl} src={mediaUrl(previewUrl)} className="trim-video" controls playsInline />
+          </div>
+
+          <div className="trim-range-row">
+            <span className="trim-label">스티커로 만들 구간을 골라주세요</span>
+            <span className="trim-readout">{range.start.toFixed(1)}초 → {range.end.toFixed(1)}초 · {(range.end - range.start).toFixed(1)}초</span>
+          </div>
+          <div className="trim-range">
+            <div className="trim-range-track">
+              <span
+                className="trim-range-fill"
+                style={{
+                  left: `${duration ? (range.start / duration) * 100 : 0}%`,
+                  width: `${duration ? ((range.end - range.start) / duration) * 100 : 0}%`,
+                }}
+              />
+            </div>
+            <input type="range" className="trim-range-input" min={0} max={duration || 0} step={0.1} value={range.start} onChange={handleStartChange} aria-label="시작 시간" />
+            <input type="range" className="trim-range-input" min={0} max={duration || 0} step={0.1} value={range.end} onChange={handleEndChange} aria-label="종료 시간" />
+          </div>
+          <p className="trim-hint">최대 5초까지 선택할 수 있어요.</p>
+
+          <div className="mode-row">
+            <div><strong>어떻게 만들까요?</strong></div>
+            <div className="mode-switch" role="group" aria-label="스티커 스타일">
+              <button type="button" className={stickerStyle === 'character' ? 'active' : ''} onClick={() => setStickerStyle('character')}>
+                <Icon name="wand" size={16} /> 캐릭터로 재창작
+              </button>
+              <button type="button" className={stickerStyle === 'original' ? 'active' : ''} onClick={() => setStickerStyle('original')}>
+                <Icon name="image" size={16} /> 원본에 가깝게
+              </button>
+            </div>
+          </div>
+
+          {error && <p className="trim-error">{error}</p>}
+
+          <div className="trim-actions">
+            <button type="button" className="trim-confirm" onClick={handleConfirmTrim}>
+              이 구간으로 만들기 <Icon name="arrow" size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {status === 'processing' && (
         <div className="process-state" aria-live="polite">
           <div className="process-head">
             <div>
               <span className="eyebrow">AI STICKER MAKER</span>
-              <h3>{activeStep < 2 ? '클립의 하이라이트를 찾는 중' : 'OGQ 스티커로 다듬는 중'}</h3>
+              <h3>{activeStep < 2 ? '표정과 동작을 분석하는 중' : 'OGQ 스티커로 다듬는 중'}</h3>
             </div>
             <strong>{progress}%</strong>
           </div>
@@ -222,7 +385,7 @@ function Generator({ mode, setMode }) {
         </div>
       )}
 
-      {status === 'complete' && (
+      {status === 'complete' && result && (
         <div className="complete-state" aria-live="polite">
           <div className="complete-copy">
             <span className="complete-check"><Icon name="check" size={22} /></span>
@@ -230,22 +393,21 @@ function Generator({ mode, setMode }) {
           </div>
           <div className="result-box">
             <div className={`result-sticker ${isAnimated ? 'is-animated' : ''}`}>
-              <img src={resultAsset} alt={isAnimated ? '여러 프레임으로 재생되는 GIF 스티커 샘플' : '완성된 정지형 PNG 스티커 샘플'} />
-              {isAnimated && <span className="playing-badge"><i /> GIF · 21F</span>}
+              <img src={mediaUrl(result.stickerUrl)} alt="완성된 스티커" />
             </div>
             <div className="result-meta">
-              <span>{resultFilename}</span>
-              <strong>740 × 640px</strong>
-              <small>{isAnimated ? 'GIF · 21프레임 · 2.63초 · 549KB' : '투명 배경 · PNG · 228KB'}</small>
+              <span>{result.emotion}</span>
+              <strong>{result.width} × {result.height}px</strong>
+              <small>{Math.round(result.bytes / 1024)}KB</small>
             </div>
           </div>
           <div className="result-actions">
-            <a href={resultAsset} download={resultDownloadName} className="download-btn">
-              <Icon name="download" size={19} /> 샘플 {isAnimated ? 'GIF' : 'PNG'} 다운로드
+            <a href={mediaUrl(result.stickerUrl)} download className="download-btn">
+              <Icon name="download" size={19} /> 스티커 다운로드
             </a>
+            <button type="button" onClick={handleConfirmTrim}><Icon name="wand" size={18} /> 다시 만들기</button>
             <button type="button" onClick={reset}><Icon name="refresh" size={18} /> 다른 클립 만들기</button>
           </div>
-          <p className="demo-note">현재 랜딩 데모에서는 샘플 결과물을 제공합니다.</p>
         </div>
       )}
     </div>
@@ -308,7 +470,7 @@ function Faq() {
 }
 
 function App() {
-  const [mode, setMode] = useState('animated')
+  const [mode, setMode] = useState('static')
 
   useEffect(() => {
     const elements = document.querySelectorAll('.reveal')
