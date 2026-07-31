@@ -59,8 +59,7 @@ p, h1, h2, h3 { margin: 0; }
 }
 .header-inner { height: 100%; width: min(1240px, calc(100% - 48px)); margin: 0 auto; display: flex; align-items: center; }
 .logo { display: inline-flex; align-items: center; gap: 9px; font: 400 21px/1 var(--nemony); letter-spacing: -.02em; }
-.logo-mark { width: 29px; height: 29px; display: grid; place-items: center; background: var(--mint); border-radius: 9px 4px 9px 9px; transform: rotate(-4deg); box-shadow: 0 0 25px rgba(0,230,147,.25); }
-.logo-mark span { width: 13px; height: 13px; border: 3px solid #10231d; border-left-color: transparent; border-radius: 50%; transform: rotate(-35deg); }
+.logo-mark { width: 29px; height: 29px; flex: none; object-fit: contain; filter: drop-shadow(0 0 12px rgba(0,230,147,.3)); }
 .logo em { padding: 4px 6px 3px; margin-left: 1px; border: 1px solid rgba(0,230,147,.36); border-radius: 5px; color: var(--mint); font: 700 8px/1 var(--body); letter-spacing: .12em; }
 .site-header nav { display: flex; gap: 34px; margin: 0 auto; }
 .site-header nav a { color: #bbc1ce; font-size: 14px; font-weight: 650; transition: color .2s; }
