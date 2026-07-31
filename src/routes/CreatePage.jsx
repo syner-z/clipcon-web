@@ -36,7 +36,7 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const stickerFilename = ({ stickerUrl, emotion }) => {
   const ext = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(stickerUrl ?? '')?.[1] ?? 'png'
   const label = (emotion ?? '').trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '')
-  return label ? `clipy-${label}.${ext}` : `clipy-sticker.${ext}`
+  return label ? `clipcon-${label}.${ext}` : `clipcon-sticker.${ext}`
 }
 
 export default function CreatePage() {
@@ -423,7 +423,7 @@ export default function CreatePage() {
             )}
           </div>
 
-          <p className="workspace-note">CLIPY는 네이버, 치지직, OGQ와 제휴하거나 공식 운영되는 서비스가 아닙니다.</p>
+          <p className="workspace-note">CLIPCON은 네이버, 치지직, OGQ와 제휴하거나 공식 운영되는 서비스가 아닙니다.</p>
         </div>
       </main>
     </div>

@@ -69,7 +69,7 @@ export default function LandingPage() {
                       <div className="film-cell" key={`${group}-${asset}`}>
                         <div className="film-sprockets" aria-hidden="true"><i /><i /></div>
                         <div className="film-frame">
-                          <img src={asset} alt={group === 0 ? `CLIPY 스티커 장면 ${index + 1}` : ''} />
+                          <img src={asset} alt={group === 0 ? `CLIPCON 스티커 장면 ${index + 1}` : ''} />
                         </div>
                         <div className="film-sprockets" aria-hidden="true"><i /><i /></div>
                       </div>
@@ -135,7 +135,7 @@ export default function LandingPage() {
               </article>
               <article className="bento bento-guide reveal">
                 <div className="guide-top"><span className="bento-tag dark">OGQ GUIDE</span></div>
-                <h3>규격은 CLIPY가<br />알아서 챙길게요</h3>
+                <h3>규격은 CLIPCON이<br />알아서 챙길게요</h3>
                 <ul>
                   <li><span><Icon name="check" size={15} /></span><div><b>이미지 크기</b><small>740 × 640px</small></div></li>
                   <li><span><Icon name="check" size={15} /></span><div><b>파일 용량</b><small>각 1MB 이하</small></div></li>
@@ -197,7 +197,7 @@ export default function LandingPage() {
 
         <section className="faq-section section-pad" id="faq">
           <div className="container faq-layout">
-            <div className="faq-copy reveal"><h2>궁금한 건<br /><em>여기서 확인하세요.</em></h2><p>더 궁금한 내용이 있다면 언제든 알려주세요.</p><div className="faq-mascot"><img src={stickerAssets.think} alt="생각 중인 CLIPY 캐릭터" /></div></div>
+            <div className="faq-copy reveal"><h2>궁금한 건<br /><em>여기서 확인하세요.</em></h2><p>더 궁금한 내용이 있다면 언제든 알려주세요.</p><div className="faq-mascot"><img src={stickerAssets.think} alt="생각 중인 CLIPCON 캐릭터" /></div></div>
             <Faq />
           </div>
         </section>
@@ -219,7 +219,7 @@ export default function LandingPage() {
           <div><Logo /><p>치지직 클립을 네이버 OGQ 스티커로 만드는<br />크리에이터를 위한 도구입니다.</p></div>
           <div className="footer-links"><div><strong>PRODUCT</strong><a href="#how">만드는 법</a><a href="#features">기능</a><a href="#specs">OGQ 규격</a></div><div><strong>SUPPORT</strong><a href="#faq">자주 묻는 질문</a><a href="mailto:hello@clipy.tools">문의하기</a><a href="#top">이용약관</a></div></div>
         </div>
-        <div className="container footer-bottom"><p>CLIPY는 네이버, 치지직, OGQ와 제휴하거나 공식 운영되는 서비스가 아닙니다.</p><span>© 2026 CLIPY. ALL RIGHTS RESERVED.</span></div>
+        <div className="container footer-bottom"><p>CLIPCON은 네이버, 치지직, OGQ와 제휴하거나 공식 운영되는 서비스가 아닙니다.</p><span>© 2026 CLIPCON. ALL RIGHTS RESERVED.</span></div>
       </footer>
     </div>
   )

@@ -182,7 +182,7 @@ p, h1, h2, h3 { margin: 0; }
 .result-actions .download-btn:disabled { cursor: progress; opacity: .65; transform: none; }
 .result-actions button:disabled { cursor: not-allowed; opacity: .45; }
 
-.site-header nav.header-nav-end { margin: 0 0 0 auto; }
+.site-header nav.header-nav-end { margin: 0 30px 0 auto; }
 
 .workspace { min-height: 100vh; padding: 148px 0 110px; position: relative; overflow: hidden; isolation: isolate; }
 .workspace::before { content: ''; position: absolute; inset: 74px 0 0; z-index: -3; background-image: linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px); background-size: 56px 56px; mask-image: linear-gradient(to bottom, black, transparent 88%); }
