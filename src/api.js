@@ -75,10 +75,10 @@ export function createClip(url) {
   })
 }
 
-export function createSticker(clipId, { start, end, mode }) {
+export function createSticker(clipId, { start, end, mode, withCaption }) {
   return request(`/clips/${clipId}/stickers`, {
     method: 'POST',
-    body: JSON.stringify({ start, end, mode }),
+    body: JSON.stringify({ start, end, mode, withCaption }),
   })
 }
 

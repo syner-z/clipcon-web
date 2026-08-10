@@ -89,6 +89,9 @@ export default function CreatePage() {
   const [stage, setStage] = useState(null)
   const [error, setError] = useState('')
   const [stickerStyle, setStickerStyle] = useState('character')
+  // 켜면 반드시 글자가 들어가고, 끄면 반드시 들어가지 않는다. 서버가 판단을
+  // 뒤집을 여지는 없다.
+  const [withCaption, setWithCaption] = useState(true)
 
   const [clipId, setClipId] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -141,6 +144,8 @@ export default function CreatePage() {
     // 길이가 고정되기 전에 저장된 구간이 남아 있을 수 있어 시작 위치만 살린다.
     setRange(rangeAt(pending.range?.start ?? 0, Number(pending.duration) || 0))
     setStickerStyle(pending.stickerStyle === 'original' ? 'original' : 'character')
+    // 저장된 값이 없던 시절의 pending도 켜짐으로 복원된다(기본값과 같다).
+    setWithCaption(pending.withCaption !== false)
     setMode(pending.mode === 'animated' ? 'animated' : 'static')
     setStatus('trimming')
   }, [])
@@ -203,6 +208,7 @@ export default function CreatePage() {
         title: clipTitle,
         range,
         stickerStyle,
+        withCaption,
         mode,
       }))
       window.location.href = loginUrl('/create')
@@ -222,7 +228,12 @@ export default function CreatePage() {
     pollAbortRef.current = controller
 
     try {
-      const { jobId } = await createSticker(clipId, { start: range.start, end: range.end, mode: stickerStyle })
+      const { jobId } = await createSticker(clipId, {
+        start: range.start,
+        end: range.end,
+        mode: stickerStyle,
+        withCaption,
+      })
       const stickerResult = await pollJob(jobId, {
         signal: controller.signal,
         onProgress: (job) => {
@@ -376,6 +387,18 @@ export default function CreatePage() {
                     </button>
                     <button type="button" className={stickerStyle === 'original' ? 'active' : ''} onClick={() => setStickerStyle('original')}>
                       <Icon name="image" size={16} /> 원본에 가깝게
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mode-row">
+                  <div><strong>스티커에 글자를 넣을까요?</strong></div>
+                  <div className="mode-switch" role="group" aria-label="글자 삽입">
+                    <button type="button" className={withCaption ? 'active' : ''} onClick={() => setWithCaption(true)}>
+                      <Icon name="text" size={16} /> 글자 넣기
+                    </button>
+                    <button type="button" className={withCaption ? '' : 'active'} onClick={() => setWithCaption(false)}>
+                      <Icon name="textOff" size={16} /> 글자 없이
                     </button>
                   </div>
                 </div>
