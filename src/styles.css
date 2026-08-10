@@ -140,7 +140,7 @@ p, h1, h2, h3 { margin: 0; }
 .trim-label { color: #c9cedc; font-size: 12px; font-weight: 700; }
 .trim-readout { color: var(--mint); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .trim-hint { margin-top: 8px; color: #666e7b; font-size: 9px; }
-.trim-title { margin-top: 10px; color: #9ba1b0; font-size: 11px; line-height: 1.5; }
+.trim-title { margin-top: 8px; color: #9ba1b0; font-size: 11px; line-height: 1.5; }
 .clip-player { user-select: none; border-radius: 11px; overflow: hidden; background: #0d0e0f; border: 1px solid rgba(255,255,255,.07); }
 .clip-player-stage { position: relative; user-select: none; background: #000; }
 .clip-player-stage video { width: 100%; max-height: 220px; display: block; background: #000; }
@@ -167,7 +167,10 @@ p, h1, h2, h3 { margin: 0; }
 .clip-player-progress { position: absolute; inset: 0; border-radius: 4px; background: linear-gradient(90deg, var(--mint), var(--yellow)); clip-path: inset(0 calc(100% - var(--played, 0%)) 0 0); pointer-events: none; }
 .clip-player-time { color: var(--mint); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .trim-error { margin-top: 12px; color: var(--danger); font-size: 11px; }
-.trim-actions { margin-top: 16px; }
+.trim-actions { margin-top: 18px; }
+/* .mode-row의 margin-bottom은 idle 폼에서 URL 입력칸 위에 놓이려고 둔 것이다.
+   여기서는 방향이 반대라 위쪽 간격이 0이 되므로 이 문맥에서만 다시 잡는다. */
+.trim-state .mode-row { margin: 18px 0 0; }
 .trim-confirm { width: 100%; height: 46px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 9px; color: #102019; background: var(--mint); font-size: 12px; font-weight: 850; cursor: pointer; transition: background .2s, transform .2s; }
 .trim-confirm:hover { background: var(--mint-soft); transform: translateY(-1px); }
 
@@ -455,10 +458,22 @@ footer { padding:58px 0 26px;background:#0f1012;border-top:1px solid rgba(255,25
 .header-user small { color: var(--mint); font-size: 8px; font-weight: 750; }
 .header-user button { padding: 6px 7px; border-radius: 6px; color: #7f8794; background: transparent; font-size: 8px; cursor: pointer; }
 .header-user button:hover { color: #fff; background: rgba(255,255,255,.06); }
-.quota-note { min-height: 42px; margin-top: 14px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(0,230,147,.16); border-radius: 9px; color: #8e97a5; background: rgba(0,230,147,.055); font-size: 10px; }
-.quota-note strong { color: var(--mint); font-size: 11px; }
-.quota-note.is-empty { border-color: rgba(255,101,122,.24); background: rgba(255,101,122,.06); }
-.quota-note.is-empty strong { color: var(--danger); }
+/* 카드 안의 다른 정보처럼 플러시 라벨↔값 행으로 둔다. 테두리 박스를 쓰면
+   이 카드에서 유일한 알림 상자가 되어 혼자 겉돈다. */
+.quota { margin-top: 18px; }
+.quota-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.quota-label { color: #c9cedc; font-size: 12px; font-weight: 700; }
+.quota-value { display: flex; align-items: center; gap: 10px; }
+.quota-count { color: var(--mint); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.quota-count em { color: #6f7787; font-size: 11px; font-style: normal; font-weight: 700; }
+.quota-count.is-empty { color: var(--danger); }
+.quota-pips { display: flex; gap: 3px; }
+.quota-pips i { width: 15px; height: 4px; border-radius: 4px; background: #2a2e34; }
+.quota-pips i.is-left { background: var(--mint); box-shadow: 0 0 8px rgba(0,230,147,.3); }
+.quota-bar { width: 58px; height: 4px; border-radius: 4px; background: #2a2e34; overflow: hidden; }
+.quota-bar span { height: 100%; display: block; border-radius: 4px; background: var(--mint); box-shadow: 0 0 8px rgba(0,230,147,.3); }
+.quota-msg { margin-top: 9px; color: #7d8492; font-size: 10px; }
+.quota-msg.is-empty { color: var(--danger); }
 .trim-confirm:disabled { cursor: not-allowed; opacity: .45; transform: none; }
 
 @keyframes authShimmer { to { background-position: -200% 0; } }
@@ -474,5 +489,6 @@ footer { padding:58px 0 26px;background:#0f1012;border-top:1px solid rgba(255,25
   .header-user > img, .header-user > span { width: 29px; height: 29px; }
   .header-user button { padding: 6px 5px; font-size: 7px; }
   .header-actions .header-cta { display: none; }
-  .quota-note { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .quota-label { font-size: 11px; }
+  .quota-count { font-size: 11px; }
 }

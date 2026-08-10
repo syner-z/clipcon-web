@@ -53,6 +53,31 @@ const stickerFilename = ({ stickerUrl, emotion }) => {
   return label ? `clipcon-${label}.${ext}` : `clipcon-sticker.${ext}`
 }
 
+// 남은 횟수는 대개 한 자릿수여서 연속 바보다 칸이 나뉜 쪽이 세기 쉽다.
+// 한도가 커지면 칸이 실오라기처럼 얇아지므로 그때만 연속 바로 넘어간다.
+const PIP_LIMIT = 10
+
+function QuotaMeter({ remaining, limit }) {
+  if (!(limit > 0)) return null
+  const label = `${limit}회 중 ${remaining}회 남음`
+
+  if (limit > PIP_LIMIT) {
+    return (
+      <div className="quota-bar" role="img" aria-label={label}>
+        <span style={{ width: `${clamp((remaining / limit) * 100, 0, 100)}%` }} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="quota-pips" role="img" aria-label={label}>
+      {Array.from({ length: limit }, (_, index) => (
+        <i key={index} className={index < remaining ? 'is-left' : ''} />
+      ))}
+    </div>
+  )
+}
+
 export default function CreatePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { user, loading: authLoading, refresh } = useAuth()
@@ -320,16 +345,26 @@ export default function CreatePage() {
                 <p className="trim-hint">5초 구간을 좌우로 옮겨서 골라주세요.</p>
                 {clipTitle && <p className="trim-title">“{clipTitle}” — 이 클립의 제목도 참고해서 만들어요</p>}
 
-                <div className={`quota-note ${user?.quotaRemaining === 0 ? 'is-empty' : ''}`}>
+                <div className="quota">
                   {authLoading ? (
-                    <span>로그인 상태를 확인하고 있어요.</span>
+                    <p className="quota-msg">로그인 상태를 확인하고 있어요.</p>
                   ) : user ? (
                     <>
-                      <span>남은 생성</span>
-                      <strong>{user.quotaRemaining} / {user.quotaLimit}회</strong>
+                      <div className="quota-head">
+                        <span className="quota-label">남은 생성</span>
+                        <span className="quota-value">
+                          <QuotaMeter remaining={user.quotaRemaining} limit={user.quotaLimit} />
+                          <span className={`quota-count ${user.quotaRemaining === 0 ? 'is-empty' : ''}`}>
+                            {user.quotaRemaining}<em> / {user.quotaLimit}회</em>
+                          </span>
+                        </span>
+                      </div>
+                      {user.quotaRemaining === 0 && (
+                        <p className="quota-msg is-empty">무료 생성 한도를 모두 썼어요.</p>
+                      )}
                     </>
                   ) : (
-                    <span>생성 버튼을 누르면 Google 로그인 후 이어서 만들 수 있어요.</span>
+                    <p className="quota-msg">생성 버튼을 누르면 Google 로그인 후 이어서 만들 수 있어요.</p>
                   )}
                 </div>
 
