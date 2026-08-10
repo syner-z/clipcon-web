@@ -150,6 +150,14 @@ p, h1, h2, h3 { margin: 0; }
 .clip-player-btn { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px; color: #c9cedc; background: transparent; cursor: pointer; transition: color .2s, background .2s; }
 .clip-player-btn:hover { color: #fff; background: rgba(255,255,255,.06); }
 .clip-player-btn:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+/* 슬라이더는 늘 펴 둔다. 가리킬 때만 펴는 방식은 폭 0이 감싼 요소의 플렉스
+   기준 크기까지 0으로 만들어, 옆에서 flex:1로 자라는 타임라인이 남은 공간을
+   모두 가져간 뒤에는 다시 펼 자리가 없다. 상시 표시가 터치·발견성에도 낫다. */
+.clip-player-volume { flex: none; display: flex; align-items: center; gap: 7px; }
+.clip-player-volume-slider { width: 60px; height: 4px; flex: none; margin: 0; padding: 0; border-radius: 4px; background: linear-gradient(90deg, var(--mint) var(--level, 0%), #2a2e34 var(--level, 0%)); cursor: pointer; -webkit-appearance: none; appearance: none; }
+.clip-player-volume-slider::-webkit-slider-thumb { width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer; -webkit-appearance: none; appearance: none; }
+.clip-player-volume-slider::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: pointer; }
+.clip-player-volume-slider:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 .clip-player-timeline { flex: 1; position: relative; height: 30px; touch-action: none; }
 .clip-player-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 4px; background: #23262b; }
 /* 재생은 늘 구간 안에서 일어나므로 플레이헤드는 사실상 항상 창 위에 놓인다.
@@ -246,6 +254,9 @@ p, h1, h2, h3 { margin: 0; }
   .clip-player-btn { width: 27px; height: 27px; }
   .clip-player-window { height: 24px; margin-top: -12px; }
   .clip-player-playhead { height: 30px; margin-top: -15px; }
+  /* 손가락에는 hover가 없고 기기에 음량 버튼이 있다. 펼 방법 없는 슬라이더를
+     초점 순서에만 남겨 두느니 음소거 버튼만 남긴다. */
+  .clip-player-volume-slider { display: none; }
   .clip-player-time { font-size: 10px; }
 }
 

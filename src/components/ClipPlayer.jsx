@@ -9,6 +9,9 @@ const BIG_STEP = 1
 // 판정이 빗나가 다시 재생을 눌러도 제자리에서 멈춘 것처럼 보인다.
 const END_EPSILON = 0.05
 
+// 음량 0에서 음소거를 풀면 여전히 아무 소리도 안 나서 고장처럼 보인다.
+const DEFAULT_VOLUME = 0.6
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const percent = (value, total) => (total > 0 ? clamp((value / total) * 100, 0, 100) : 0)
 const round = (value) => Math.round(value * 100) / 100
@@ -30,6 +33,7 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
   const [currentTime, setCurrentTime] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [volume, setVolume] = useState(1)
   const [metaDuration, setMetaDuration] = useState(0)
 
   const total = metaDuration || duration || 0
@@ -78,10 +82,13 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
     endedRef.current = false
   }, [range.start, range.end])
 
-  // 재마운트된 video는 muted가 false로 돌아가므로 src도 의존성에 넣는다.
+  // 재마운트된 video는 음소거·음량이 기본값으로 돌아가므로 src도 의존성에 넣는다.
   useEffect(() => {
-    if (videoRef.current) videoRef.current.muted = muted
-  }, [muted, src])
+    const video = videoRef.current
+    if (!video) return
+    video.muted = muted
+    video.volume = volume
+  }, [muted, volume, src])
 
   const timeFromClientX = (clientX) => {
     const rect = timelineRef.current?.getBoundingClientRect()
@@ -156,6 +163,21 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
     video.play().catch(() => {})
   }
 
+  const toggleMute = () => {
+    if (!muted) {
+      setMuted(true)
+      return
+    }
+    setMuted(false)
+    if (volume === 0) setVolume(DEFAULT_VOLUME)
+  }
+
+  const handleVolumeChange = (event) => {
+    const next = Number(event.target.value)
+    setVolume(next)
+    setMuted(next === 0)
+  }
+
   const handleLoadedMetadata = (event) => {
     const value = event.currentTarget.duration
     setMetaDuration(Number.isFinite(value) ? value : 0)
@@ -179,6 +201,8 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
   const atSegmentEnd = !playing && total > 0 && currentTime >= range.end - END_EPSILON
   // 재생 위치는 구간 안에 머무르므로, 구간 대비 얼마나 지났는지로 채운다.
   const playedPercent = segment > 0 ? clamp(((currentTime - range.start) / segment) * 100, 0, 100) : 0
+  // 음소거는 음량을 지우지 않고 가리기만 한다. 해제하면 원래 값으로 돌아온다.
+  const level = muted ? 0 : volume
 
   return (
     <div className="clip-player">
@@ -243,15 +267,28 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="clip-player-btn"
-          onClick={() => setMuted((value) => !value)}
-          aria-label={muted ? '음소거 해제' : '음소거'}
-          aria-pressed={muted}
-        >
-          <Icon name={muted ? 'mute' : 'volume'} size={18} />
-        </button>
+        <div className="clip-player-volume">
+          <button
+            type="button"
+            className="clip-player-btn"
+            onClick={toggleMute}
+            aria-label={muted ? '음소거 해제' : '음소거'}
+            aria-pressed={muted}
+          >
+            <Icon name={level === 0 ? 'mute' : level < 0.5 ? 'volumeLow' : 'volume'} size={18} />
+          </button>
+          <input
+            type="range"
+            className="clip-player-volume-slider"
+            min={0}
+            max={1}
+            step={0.01}
+            value={level}
+            onChange={handleVolumeChange}
+            style={{ '--level': `${(level * 100).toFixed(0)}%` }}
+            aria-label="음량"
+          />
+        </div>
 
         <span className="clip-player-time">{currentTime.toFixed(1)} / {total.toFixed(1)}초</span>
       </div>

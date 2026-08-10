@@ -5,6 +5,7 @@ const paths = {
   play: <path d="m8 5 11 7-11 7V5Z" />,
   pause: <><path d="M9 5v14" /><path d="M15 5v14" /></>,
   volume: <><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 9.2a4 4 0 0 1 0 5.6" /><path d="M18.5 6.5a8 8 0 0 1 0 11" /></>,
+  volumeLow: <><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 9.2a4 4 0 0 1 0 5.6" /></>,
   mute: <><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="m16 10 5 4" /><path d="m21 10-5 4" /></>,
   spark: <><path d="m12 3-1.2 4.3a5 5 0 0 1-3.5 3.5L3 12l4.3 1.2a5 5 0 0 1 3.5 3.5L12 21l1.2-4.3a5 5 0 0 1 3.5-3.5L21 12l-4.3-1.2a5 5 0 0 1-3.5-3.5L12 3Z" /></>,
   download: <><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></>,
