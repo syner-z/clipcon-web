@@ -4,21 +4,28 @@ import Icon from './Icon.jsx'
 const STEP = 0.1
 const BIG_STEP = 1
 
+// 구간 끝에서 멈출 때 브라우저는 요청한 시각의 바로 앞 프레임으로 스냅한다.
+// 그래서 currentTime이 end보다 근소하게 작아지고, 그대로 두면 "끝에 닿았는가"
+// 판정이 빗나가 다시 재생을 눌러도 제자리에서 멈춘 것처럼 보인다.
+const END_EPSILON = 0.05
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const percent = (value, total) => (total > 0 ? clamp((value / total) * 100, 0, 100) : 0)
 const round = (value) => Math.round(value * 100) / 100
 
 /**
- * 구간 선택용 자체 플레이어. 구간 제약(최소·최대 길이)은 부모가 소유하므로
- * 여기서는 포인터/키보드 입력을 초 단위로 바꿔 그대로 올려보내고,
- * 화면에는 항상 부모가 내려준 range를 그린다.
+ * 구간 선택용 자체 플레이어. 구간 길이는 고정이고 위치만 옮긴다.
+ * 길이·경계 제약은 부모가 소유하므로 여기서는 포인터/키보드 입력을
+ * 시작 시각(초)으로 바꿔 올려보내고, 화면에는 항상 부모가 내려준 range를 그린다.
  */
-export default function ClipPlayer({ src, duration, range, onStartChange, onEndChange }) {
+export default function ClipPlayer({ src, duration, range, onRangeMove }) {
   const videoRef = useRef(null)
   const timelineRef = useRef(null)
-  const draggingRef = useRef(null)
+  const draggingRef = useRef(false)
+  const grabOffsetRef = useRef(0)
   const rafRef = useRef(0)
   const seekTargetRef = useRef(null)
+  const endedRef = useRef(false)
 
   const [currentTime, setCurrentTime] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -26,6 +33,8 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
   const [metaDuration, setMetaDuration] = useState(0)
 
   const total = metaDuration || duration || 0
+  const segment = Math.max(range.end - range.start, 0)
+  const maxStart = Math.max(total - segment, 0)
 
   // 드래그 중 pointermove마다 currentTime을 대입하면 스크럽이 버벅이므로
   // 목표 시각만 모아두고 프레임당 한 번만 반영한다.
@@ -39,6 +48,7 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
   }, [])
 
   const scheduleSeek = useCallback((seconds) => {
+    endedRef.current = false
     seekTargetRef.current = seconds
     setCurrentTime(seconds)
     if (rafRef.current) return
@@ -60,7 +70,13 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
     setCurrentTime(0)
     setPlaying(false)
     setMetaDuration(0)
+    endedRef.current = false
   }, [src])
+
+  // 구간을 옮기면 이전에 도달했던 끝은 더 이상 의미가 없다.
+  useEffect(() => {
+    endedRef.current = false
+  }, [range.start, range.end])
 
   // 재마운트된 video는 muted가 false로 돌아가므로 src도 의존성에 넣는다.
   useEffect(() => {
@@ -73,31 +89,32 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
     return clamp((clientX - rect.left) / rect.width, 0, 1) * total
   }
 
-  const emit = (which, seconds) => {
-    if (which === 'start') onStartChange(seconds)
-    else onEndChange(seconds)
+  const moveTo = (rawStart) => {
+    const next = clamp(rawStart, 0, maxStart)
+    onRangeMove(next)
+    scheduleSeek(next)
   }
 
-  const handlePointerDown = (which) => (event) => {
+  const handleWindowPointerDown = (event) => {
     event.preventDefault()
     event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
     // pointerdown의 기본 동작을 막으면 포커스도 함께 막히므로 직접 옮긴다.
-    // 잡은 핸들을 그대로 화살표 키로 미세 조정할 수 있어야 한다.
+    // 잡은 구간을 그대로 화살표 키로 미세 조정할 수 있어야 한다.
     event.currentTarget.focus()
-    draggingRef.current = which
+    // 잡은 지점과 구간 시작의 간격을 유지해야 구간이 커서로 튀지 않는다.
+    grabOffsetRef.current = timeFromClientX(event.clientX) - range.start
+    draggingRef.current = true
   }
 
-  const handlePointerMove = (which) => (event) => {
-    if (draggingRef.current !== which) return
-    const seconds = timeFromClientX(event.clientX)
-    emit(which, seconds)
-    scheduleSeek(seconds)
-  }
-
-  const handlePointerEnd = (event) => {
+  const handleWindowPointerMove = (event) => {
     if (!draggingRef.current) return
-    draggingRef.current = null
+    moveTo(timeFromClientX(event.clientX) - grabOffsetRef.current)
+  }
+
+  const handleWindowPointerEnd = (event) => {
+    if (!draggingRef.current) return
+    draggingRef.current = false
     flushSeek()
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
@@ -109,33 +126,34 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
     scheduleSeek(timeFromClientX(event.clientX))
   }
 
-  const handleKeyDown = (which) => (event) => {
+  const handleWindowKeyDown = (event) => {
     const step = event.shiftKey ? BIG_STEP : STEP
-    const value = which === 'start' ? range.start : range.end
     let next
-    if (event.key === 'ArrowLeft') next = value - step
-    else if (event.key === 'ArrowRight') next = value + step
+    if (event.key === 'ArrowLeft') next = range.start - step
+    else if (event.key === 'ArrowRight') next = range.start + step
     else if (event.key === 'Home') next = 0
-    else if (event.key === 'End') next = total
+    else if (event.key === 'End') next = maxStart
     else return
 
     event.preventDefault()
-    const seconds = round(clamp(next, 0, total))
-    emit(which, seconds)
-    scheduleSeek(seconds)
+    moveTo(round(next))
   }
 
   const togglePlay = () => {
     const video = videoRef.current
     if (!video) return
-    if (video.paused) {
-      if (video.currentTime < range.start || video.currentTime >= range.end) {
-        video.currentTime = range.start
-      }
-      video.play().catch(() => {})
-    } else {
+    if (!video.paused) {
       video.pause()
+      return
     }
+    // 구간 끝에 멈춰 있으면 되감아야 다시 볼 수 있다. 프레임 스냅 때문에
+    // currentTime 비교만으로는 놓치는 경우가 있어 도달 여부를 따로 들고 있는다.
+    if (endedRef.current || video.currentTime < range.start || video.currentTime >= range.end - END_EPSILON) {
+      video.currentTime = range.start
+      setCurrentTime(range.start)
+    }
+    endedRef.current = false
+    video.play().catch(() => {})
   }
 
   const handleLoadedMetadata = (event) => {
@@ -149,13 +167,16 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
       video.pause()
       video.currentTime = range.end
       setCurrentTime(range.end)
+      endedRef.current = true
       return
     }
     setCurrentTime(video.currentTime)
   }
 
   const startPercent = percent(range.start, total)
-  const endPercent = percent(range.end, total)
+  const widthPercent = Math.max(percent(range.end, total) - startPercent, 0)
+  // 라벨은 렌더마다 다시 계산해야 하므로 ref가 아니라 상태에서 끌어온다.
+  const atSegmentEnd = !playing && total > 0 && currentTime >= range.end - END_EPSILON
 
   return (
     <div className="clip-player">
@@ -178,7 +199,7 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
           type="button"
           className={`clip-player-bigplay ${playing ? '' : 'is-visible'}`}
           onClick={togglePlay}
-          aria-label="재생"
+          aria-label={atSegmentEnd ? '다시 재생' : '재생'}
           tabIndex={playing ? -1 : 0}
           aria-hidden={playing}
         >
@@ -198,45 +219,26 @@ export default function ClipPlayer({ src, duration, range, onStartChange, onEndC
 
         <div className="clip-player-timeline" ref={timelineRef} onPointerDown={handleTrackPointerDown}>
           <div className="clip-player-track" />
-          <div
-            className="clip-player-selection"
-            style={{ left: `${startPercent}%`, width: `${Math.max(endPercent - startPercent, 0)}%` }}
-          />
           <div className="clip-player-playhead" style={{ left: `${percent(currentTime, total)}%` }} />
           <button
             type="button"
-            className="clip-player-handle is-start"
-            style={{ left: `${startPercent}%` }}
+            className="clip-player-window"
+            style={{ left: `${startPercent}%`, width: `${widthPercent}%` }}
             role="slider"
             tabIndex={0}
-            aria-label="시작 시간"
+            aria-label="구간 위치"
             aria-valuemin={0}
-            aria-valuemax={total}
+            aria-valuemax={round(maxStart)}
             aria-valuenow={range.start}
-            aria-valuetext={`${range.start.toFixed(1)}초`}
-            onPointerDown={handlePointerDown('start')}
-            onPointerMove={handlePointerMove('start')}
-            onPointerUp={handlePointerEnd}
-            onPointerCancel={handlePointerEnd}
-            onKeyDown={handleKeyDown('start')}
-          />
-          <button
-            type="button"
-            className="clip-player-handle is-end"
-            style={{ left: `${endPercent}%` }}
-            role="slider"
-            tabIndex={0}
-            aria-label="종료 시간"
-            aria-valuemin={0}
-            aria-valuemax={total}
-            aria-valuenow={range.end}
-            aria-valuetext={`${range.end.toFixed(1)}초`}
-            onPointerDown={handlePointerDown('end')}
-            onPointerMove={handlePointerMove('end')}
-            onPointerUp={handlePointerEnd}
-            onPointerCancel={handlePointerEnd}
-            onKeyDown={handleKeyDown('end')}
-          />
+            aria-valuetext={`${range.start.toFixed(1)}초부터 ${range.end.toFixed(1)}초까지`}
+            onPointerDown={handleWindowPointerDown}
+            onPointerMove={handleWindowPointerMove}
+            onPointerUp={handleWindowPointerEnd}
+            onPointerCancel={handleWindowPointerEnd}
+            onKeyDown={handleWindowKeyDown}
+          >
+            <i /><i /><i />
+          </button>
         </div>
 
         <button

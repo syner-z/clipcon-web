@@ -9,7 +9,6 @@ import { ApiError, createClip, createSticker, downloadMedia, loginUrl, mediaUrl,
 import { useAuth } from '../auth.jsx'
 
 const MAX_SEGMENT = 5
-const MIN_SEGMENT = 0.5
 const PENDING_KEY = 'clipy:pending'
 
 const STAGE_TO_STEP = {
@@ -33,6 +32,20 @@ const STATUS_TO_WORKSPACE_STEP = {
 }
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+// 0.1초 단위로 맞춘다. 부동소수 찌꺼기가 서버의 5초 상한 검사에 걸리지 않게 하고,
+// 드래그와 화살표 키가 같은 눈금 위에서 움직이게 하는 목적도 겸한다.
+const snap = (value) => Math.round(value * 10) / 10
+
+// 구간 길이는 5초 고정이다. 클립이 5초보다 짧으면 클립 전체가 구간이 된다.
+const segmentFor = (clipDuration) => Math.min(MAX_SEGMENT, clipDuration || MAX_SEGMENT)
+
+// 시작 위치만 받아 고정 길이 구간을 만든다. 위치는 클립 밖으로 나가지 않는다.
+const rangeAt = (rawStart, clipDuration) => {
+  const length = segmentFor(clipDuration)
+  const start = snap(clamp(rawStart, 0, Math.max(0, clipDuration - length)))
+  return { start, end: snap(start + length) }
+}
 
 const stickerFilename = ({ stickerUrl, emotion }) => {
   const ext = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(stickerUrl ?? '')?.[1] ?? 'png'
@@ -100,7 +113,8 @@ export default function CreatePage() {
     setPreviewUrl(pending.previewUrl || null)
     setDuration(Number(pending.duration) || 0)
     setClipTitle(pending.title || null)
-    setRange(pending.range || { start: 0, end: 0 })
+    // 길이가 고정되기 전에 저장된 구간이 남아 있을 수 있어 시작 위치만 살린다.
+    setRange(rangeAt(pending.range?.start ?? 0, Number(pending.duration) || 0))
     setStickerStyle(pending.stickerStyle === 'original' ? 'original' : 'character')
     setMode(pending.mode === 'animated' ? 'animated' : 'static')
     setStatus('trimming')
@@ -139,8 +153,7 @@ export default function CreatePage() {
       setPreviewUrl(clipResult.previewUrl)
       setDuration(clipResult.duration)
       setClipTitle(clipResult.title || null)
-      const initialEnd = clamp(MAX_SEGMENT, MIN_SEGMENT, clipResult.duration || MAX_SEGMENT)
-      setRange({ start: 0, end: initialEnd })
+      setRange(rangeAt(0, clipResult.duration))
       setStatus('trimming')
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return
@@ -149,28 +162,8 @@ export default function CreatePage() {
     }
   }
 
-  const handleStartChange = (raw) => {
-    setRange(({ end }) => {
-      let nextStart = clamp(raw, 0, duration)
-      nextStart = Math.min(nextStart, end - MIN_SEGMENT)
-      nextStart = Math.max(nextStart, 0)
-      let nextEnd = end
-      if (nextEnd - nextStart > MAX_SEGMENT) nextEnd = clamp(nextStart + MAX_SEGMENT, 0, duration)
-      if (nextEnd - nextStart > MAX_SEGMENT) nextStart = nextEnd - MAX_SEGMENT
-      return { start: nextStart, end: nextEnd }
-    })
-  }
-
-  const handleEndChange = (raw) => {
-    setRange(({ start }) => {
-      let nextEnd = clamp(raw, 0, duration)
-      nextEnd = Math.max(nextEnd, start + MIN_SEGMENT)
-      nextEnd = Math.min(nextEnd, duration)
-      let nextStart = start
-      if (nextEnd - nextStart > MAX_SEGMENT) nextStart = Math.max(0, nextEnd - MAX_SEGMENT)
-      if (nextEnd - nextStart > MAX_SEGMENT) nextEnd = nextStart + MAX_SEGMENT
-      return { start: nextStart, end: nextEnd }
-    })
+  const handleRangeMove = (rawStart) => {
+    setRange(rangeAt(rawStart, duration))
   }
 
   const handleConfirmTrim = async () => {
@@ -317,15 +310,14 @@ export default function CreatePage() {
                   src={mediaUrl(previewUrl)}
                   duration={duration}
                   range={range}
-                  onStartChange={handleStartChange}
-                  onEndChange={handleEndChange}
+                  onRangeMove={handleRangeMove}
                 />
 
                 <div className="trim-range-row">
                   <span className="trim-label">스티커로 만들 구간을 골라주세요</span>
                   <span className="trim-readout">{range.start.toFixed(1)}초 → {range.end.toFixed(1)}초 · {(range.end - range.start).toFixed(1)}초</span>
                 </div>
-                <p className="trim-hint">최대 5초까지 선택할 수 있어요.</p>
+                <p className="trim-hint">5초 구간을 좌우로 옮겨서 골라주세요.</p>
                 {clipTitle && <p className="trim-title">“{clipTitle}” — 이 클립의 제목도 참고해서 만들어요</p>}
 
                 <div className={`quota-note ${user?.quotaRemaining === 0 ? 'is-empty' : ''}`}>
