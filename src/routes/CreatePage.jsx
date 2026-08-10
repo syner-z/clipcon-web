@@ -55,6 +55,7 @@ export default function CreatePage() {
   const [clipId, setClipId] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [duration, setDuration] = useState(0)
+  const [clipTitle, setClipTitle] = useState(null)
   const [range, setRange] = useState({ start: 0, end: 0 })
   const [result, setResult] = useState(null)
   const [downloading, setDownloading] = useState(false)
@@ -98,6 +99,7 @@ export default function CreatePage() {
     setClipId(pending.clipId)
     setPreviewUrl(pending.previewUrl || null)
     setDuration(Number(pending.duration) || 0)
+    setClipTitle(pending.title || null)
     setRange(pending.range || { start: 0, end: 0 })
     setStickerStyle(pending.stickerStyle === 'original' ? 'original' : 'character')
     setMode(pending.mode === 'animated' ? 'animated' : 'static')
@@ -136,6 +138,7 @@ export default function CreatePage() {
       setClipId(clipResult.clipId)
       setPreviewUrl(clipResult.previewUrl)
       setDuration(clipResult.duration)
+      setClipTitle(clipResult.title || null)
       const initialEnd = clamp(MAX_SEGMENT, MIN_SEGMENT, clipResult.duration || MAX_SEGMENT)
       setRange({ start: 0, end: initialEnd })
       setStatus('trimming')
@@ -179,6 +182,7 @@ export default function CreatePage() {
         clipId,
         previewUrl,
         duration,
+        title: clipTitle,
         range,
         stickerStyle,
         mode,
@@ -247,6 +251,7 @@ export default function CreatePage() {
     setClipId(null)
     setPreviewUrl(null)
     setDuration(0)
+    setClipTitle(null)
     setRange({ start: 0, end: 0 })
     setResult(null)
     setDownloading(false)
@@ -321,6 +326,7 @@ export default function CreatePage() {
                   <span className="trim-readout">{range.start.toFixed(1)}초 → {range.end.toFixed(1)}초 · {(range.end - range.start).toFixed(1)}초</span>
                 </div>
                 <p className="trim-hint">최대 5초까지 선택할 수 있어요.</p>
+                {clipTitle && <p className="trim-title">“{clipTitle}” — 이 클립의 제목도 참고해서 만들어요</p>}
 
                 <div className={`quota-note ${user?.quotaRemaining === 0 ? 'is-empty' : ''}`}>
                   {authLoading ? (

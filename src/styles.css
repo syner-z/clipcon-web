@@ -140,6 +140,7 @@ p, h1, h2, h3 { margin: 0; }
 .trim-label { color: #c9cedc; font-size: 12px; font-weight: 700; }
 .trim-readout { color: var(--mint); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .trim-hint { margin-top: 8px; color: #666e7b; font-size: 9px; }
+.trim-title { margin-top: 10px; color: #9ba1b0; font-size: 11px; line-height: 1.5; }
 .clip-player { user-select: none; border-radius: 11px; overflow: hidden; background: #0d0e0f; border: 1px solid rgba(255,255,255,.07); }
 .clip-player-stage { position: relative; user-select: none; background: #000; }
 .clip-player-stage video { width: 100%; max-height: 220px; display: block; background: #000; }
