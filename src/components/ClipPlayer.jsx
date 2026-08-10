@@ -177,6 +177,8 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
   const widthPercent = Math.max(percent(range.end, total) - startPercent, 0)
   // 라벨은 렌더마다 다시 계산해야 하므로 ref가 아니라 상태에서 끌어온다.
   const atSegmentEnd = !playing && total > 0 && currentTime >= range.end - END_EPSILON
+  // 재생 위치는 구간 안에 머무르므로, 구간 대비 얼마나 지났는지로 채운다.
+  const playedPercent = segment > 0 ? clamp(((currentTime - range.start) / segment) * 100, 0, 100) : 0
 
   return (
     <div className="clip-player">
@@ -237,7 +239,7 @@ export default function ClipPlayer({ src, duration, range, onRangeMove }) {
             onPointerCancel={handleWindowPointerEnd}
             onKeyDown={handleWindowKeyDown}
           >
-            <i /><i /><i />
+            <span className="clip-player-progress" style={{ '--played': `${playedPercent.toFixed(2)}%` }} />
           </button>
         </div>
 

@@ -152,13 +152,19 @@ p, h1, h2, h3 { margin: 0; }
 .clip-player-btn:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
 .clip-player-timeline { flex: 1; position: relative; height: 30px; touch-action: none; }
 .clip-player-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 4px; background: #23262b; }
-.clip-player-playhead { width: 2px; height: 20px; position: absolute; top: 50%; margin-top: -10px; background: var(--mint); box-shadow: 0 0 6px rgba(0,230,147,.6); border-radius: 2px; pointer-events: none; z-index: 3; }
-.clip-player-window { height: 20px; position: absolute; top: 50%; z-index: 2; margin-top: -10px; display: flex; align-items: center; justify-content: center; gap: 2px; border-radius: 6px; background: linear-gradient(90deg, var(--mint), var(--yellow)); box-shadow: 0 0 12px rgba(0,230,147,.45), 0 2px 8px rgba(0,0,0,.4); cursor: grab; }
+/* 재생은 늘 구간 안에서 일어나므로 플레이헤드는 사실상 항상 창 위에 놓인다.
+   채워진 그라디언트·빈 창·어두운 트랙 어디에서도 읽히도록 흰 막대에 검은 외곽선을
+   두르고, 창보다 높게 만들어 위아래로 삐져나오게 한다. */
+.clip-player-playhead { width: 2px; height: 26px; position: absolute; top: 50%; z-index: 3; margin-top: -13px; margin-left: -1px; border-radius: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 8px rgba(0,0,0,.5); pointer-events: none; }
+.clip-player-window { height: 20px; position: absolute; top: 50%; z-index: 2; margin-top: -10px; border-radius: 6px; background: rgba(0,230,147,.14); border: 1.5px solid var(--mint); box-shadow: 0 2px 10px rgba(0,0,0,.45); cursor: grab; transition: background .2s; }
+.clip-player-window:hover { background: rgba(0,230,147,.22); }
 .clip-player-window:active { cursor: grabbing; }
 /* 잡는 면적을 위아래로 넓혀 얇은 막대도 손가락으로 집을 수 있게 한다. */
 .clip-player-window::before { content: ''; position: absolute; inset: -12px -6px; }
-.clip-player-window i { width: 2px; height: 8px; border-radius: 2px; background: rgba(16,32,25,.5); }
 .clip-player-window:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* 그라디언트는 창 전체 폭에 고정해 두고 오른쪽에서 잘라낸다. width로 줄이면
+   재생 중에 그라디언트가 압축되면서 색이 계속 변해 보인다. */
+.clip-player-progress { position: absolute; inset: 0; border-radius: 4px; background: linear-gradient(90deg, var(--mint), var(--yellow)); clip-path: inset(0 calc(100% - var(--played, 0%)) 0 0); pointer-events: none; }
 .clip-player-time { color: var(--mint); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .trim-error { margin-top: 12px; color: var(--danger); font-size: 11px; }
 .trim-actions { margin-top: 16px; }
@@ -236,6 +242,7 @@ p, h1, h2, h3 { margin: 0; }
   .clip-player-bar { padding: 8px 9px; gap: 7px; }
   .clip-player-btn { width: 27px; height: 27px; }
   .clip-player-window { height: 24px; margin-top: -12px; }
+  .clip-player-playhead { height: 30px; margin-top: -15px; }
   .clip-player-time { font-size: 10px; }
 }
 
