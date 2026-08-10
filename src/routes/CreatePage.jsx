@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import Icon from '../components/Icon.jsx'
 import SiteHeader from '../components/SiteHeader.jsx'
 import ClipUrlForm from '../components/ClipUrlForm.jsx'
+import ClipPlayer from '../components/ClipPlayer.jsx'
 import { stickerAssets } from '../data.js'
 import { ApiError, createClip, createSticker, downloadMedia, loginUrl, mediaUrl, pollJob } from '../api.js'
 import { useAuth } from '../auth.jsx'
@@ -61,7 +62,6 @@ export default function CreatePage() {
 
   const pollAbortRef = useRef(null)
   const mountedRef = useRef(true)
-  const videoRef = useRef(null)
 
   useEffect(() => {
     mountedRef.current = true
@@ -146,8 +146,7 @@ export default function CreatePage() {
     }
   }
 
-  const handleStartChange = (event) => {
-    const raw = Number(event.target.value)
+  const handleStartChange = (raw) => {
     setRange(({ end }) => {
       let nextStart = clamp(raw, 0, duration)
       nextStart = Math.min(nextStart, end - MIN_SEGMENT)
@@ -157,11 +156,9 @@ export default function CreatePage() {
       if (nextEnd - nextStart > MAX_SEGMENT) nextStart = nextEnd - MAX_SEGMENT
       return { start: nextStart, end: nextEnd }
     })
-    if (videoRef.current) videoRef.current.currentTime = raw
   }
 
-  const handleEndChange = (event) => {
-    const raw = Number(event.target.value)
+  const handleEndChange = (raw) => {
     setRange(({ start }) => {
       let nextEnd = clamp(raw, 0, duration)
       nextEnd = Math.max(nextEnd, start + MIN_SEGMENT)
@@ -171,7 +168,6 @@ export default function CreatePage() {
       if (nextEnd - nextStart > MAX_SEGMENT) nextEnd = nextStart + MAX_SEGMENT
       return { start: nextStart, end: nextEnd }
     })
-    if (videoRef.current) videoRef.current.currentTime = raw
   }
 
   const handleConfirmTrim = async () => {
@@ -312,26 +308,17 @@ export default function CreatePage() {
 
             {status === 'trimming' && (
               <div className="trim-state" aria-live="polite">
-                <div className="trim-video-wrap">
-                  <video ref={videoRef} key={previewUrl} src={mediaUrl(previewUrl)} className="trim-video" controls playsInline />
-                </div>
+                <ClipPlayer
+                  src={mediaUrl(previewUrl)}
+                  duration={duration}
+                  range={range}
+                  onStartChange={handleStartChange}
+                  onEndChange={handleEndChange}
+                />
 
                 <div className="trim-range-row">
                   <span className="trim-label">스티커로 만들 구간을 골라주세요</span>
                   <span className="trim-readout">{range.start.toFixed(1)}초 → {range.end.toFixed(1)}초 · {(range.end - range.start).toFixed(1)}초</span>
-                </div>
-                <div className="trim-range">
-                  <div className="trim-range-track">
-                    <span
-                      className="trim-range-fill"
-                      style={{
-                        left: `${duration ? (range.start / duration) * 100 : 0}%`,
-                        width: `${duration ? ((range.end - range.start) / duration) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <input type="range" className="trim-range-input" min={0} max={duration || 0} step={0.1} value={range.start} onChange={handleStartChange} aria-label="시작 시간" />
-                  <input type="range" className="trim-range-input" min={0} max={duration || 0} step={0.1} value={range.end} onChange={handleEndChange} aria-label="종료 시간" />
                 </div>
                 <p className="trim-hint">최대 5초까지 선택할 수 있어요.</p>
 
