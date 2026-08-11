@@ -7,6 +7,7 @@ import ClipPlayer from '../components/ClipPlayer.jsx'
 import { stickerAssets } from '../data.js'
 import { ApiError, createClip, createSticker, downloadMedia, loginUrl, mediaUrl, pollJob } from '../api.js'
 import { useAuth } from '../auth.jsx'
+import { track } from '../analytics.js'
 
 const MAX_SEGMENT = 5
 const PENDING_KEY = 'clipy:pending'
@@ -51,6 +52,15 @@ const stickerFilename = ({ stickerUrl, emotion }) => {
   const ext = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(stickerUrl ?? '')?.[1] ?? 'png'
   const label = (emotion ?? '').trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '')
   return label ? `clipcon-${label}.${ext}` : `clipcon-sticker.${ext}`
+}
+
+// 분석에는 코드만 보낸다. err.message는 서버가 정하는 문자열이라 무엇이 실려 올지
+// 통제할 수 없고, 그런 값은 개인정보처리방침이 고지한 국외 이전 항목을 벗어난다.
+// 서버가 구조화된 에러 본문을 주지 못한 경우(5xx, 프록시 실패 등) code가 비는데,
+// 정작 그런 실패야말로 눈에 띄어야 하므로 상태 코드로 대신 채운다.
+const errorCode = (err) => {
+  if (!(err instanceof ApiError)) return 'UNKNOWN'
+  return err.code || `HTTP_${err.status ?? 0}`
 }
 
 // 남은 횟수는 대개 한 자릿수여서 연속 바보다 칸이 나뉜 쪽이 세기 쉽다.
@@ -169,6 +179,7 @@ export default function CreatePage() {
     setStatus('loading')
     setProgress(0)
     setStage(null)
+    track('clip_load_start')
 
     const controller = new AbortController()
     pollAbortRef.current = controller
@@ -189,9 +200,11 @@ export default function CreatePage() {
       setDuration(clipResult.duration)
       setClipTitle(clipResult.title || null)
       setRange(rangeAt(0, clipResult.duration))
+      track('clip_load_success', { clip_seconds: Math.round(clipResult.duration ?? 0) })
       setStatus('trimming')
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return
+      track('clip_load_error', { error_code: errorCode(err) })
       setError(err.message || '클립을 불러오지 못했어요.')
       setStatus('idle')
     }
@@ -222,15 +235,27 @@ export default function CreatePage() {
         agreed,
         mode,
       }))
+      track('login_start', { source: 'create_confirm' })
       window.location.href = loginUrl('/create')
       return
     }
     if (user.quotaRemaining <= 0) {
+      track('quota_exceeded', { source: 'pre_check' })
       setError(`생성 한도 ${user.quotaLimit}회를 모두 사용했어요.`)
       return
     }
     setError('')
     setDownloadError('')
+
+    // 성공·실패 양쪽에서 같은 조건을 붙여 보내야 전환율을 조건별로 나눠 볼 수 있다.
+    const stickerParams = {
+      sticker_style: stickerStyle,
+      output_mode: mode,
+      with_caption: withCaption,
+      segment_seconds: snap(range.end - range.start),
+    }
+    track('sticker_generate_start', stickerParams)
+
     setStatus('processing')
     setProgress(0)
     setStage(null)
@@ -255,10 +280,14 @@ export default function CreatePage() {
       })
       if (!mountedRef.current) return
       setResult(stickerResult)
+      track('sticker_generate_success', stickerParams)
       setStatus('complete')
       await refresh()
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return
+      const code = errorCode(err)
+      track('sticker_generate_error', { ...stickerParams, error_code: code })
+      if (code === 'QUOTA_EXCEEDED') track('quota_exceeded', { source: 'generate' })
       if (err instanceof ApiError && ['QUOTA_EXCEEDED', 'UNAUTHENTICATED'].includes(err.code)) {
         await refresh()
       }
@@ -273,8 +302,10 @@ export default function CreatePage() {
     setDownloading(true)
     try {
       await downloadMedia(result.stickerUrl, stickerFilename(result))
+      track('sticker_download', { sticker_style: stickerStyle, output_mode: mode })
     } catch (err) {
       if (!mountedRef.current) return
+      track('sticker_download_error', { error_code: errorCode(err) })
       setDownloadError(err.message || '스티커를 내려받지 못했어요.')
     } finally {
       if (mountedRef.current) setDownloading(false)
