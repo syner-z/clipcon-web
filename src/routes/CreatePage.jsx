@@ -12,6 +12,35 @@ import { track } from '../analytics.js'
 const MAX_SEGMENT = 5
 const PENDING_KEY = 'clipy:pending'
 
+// 저장소는 값을 못 넣는 데서 그치지 않고 접근 자체가 예외를 던질 수 있다.
+// 사파리의 "모든 쿠키 차단", 일부 인앱 브라우저가 그렇다. 그 예외가 effect 안에서
+// 새어 나가면 잡아 줄 에러 경계가 없어 트리 전체가 언마운트되고 화면이 백지가 된다.
+// 로그인 왕복을 위한 임시 보관일 뿐이므로, 실패하면 복원을 포기하고 진행한다.
+const session = {
+  read(key) {
+    try {
+      return sessionStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  write(key, value) {
+    try {
+      sessionStorage.setItem(key, value)
+      return true
+    } catch {
+      return false
+    }
+  },
+  clear(key) {
+    try {
+      sessionStorage.removeItem(key)
+    } catch {
+      // 지우지 못해도 할 수 있는 일이 없다.
+    }
+  },
+}
+
 const STAGE_TO_STEP = {
   downloading: 0,
   encoding_preview: 0,
@@ -140,14 +169,14 @@ export default function CreatePage() {
   useEffect(() => {
     let pending
     try {
-      pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null')
+      pending = JSON.parse(session.read(PENDING_KEY) || 'null')
     } catch {
-      sessionStorage.removeItem(PENDING_KEY)
+      session.clear(PENDING_KEY)
       return
     }
     if (!pending?.clipId) return
 
-    sessionStorage.removeItem(PENDING_KEY)
+    session.clear(PENDING_KEY)
     setUrl(pending.url || '')
     setClipId(pending.clipId)
     setPreviewUrl(pending.previewUrl || null)
@@ -223,7 +252,9 @@ export default function CreatePage() {
     }
     if (authLoading) return
     if (!user) {
-      sessionStorage.setItem(PENDING_KEY, JSON.stringify({
+      // 보관에 실패해도 로그인은 그대로 보낸다. 돌아왔을 때 고른 구간이 복원되지
+      // 않을 뿐이지만, 여기서 멈추면 버튼이 아무 반응 없이 죽은 것처럼 보인다.
+      session.write(PENDING_KEY, JSON.stringify({
         url,
         clipId,
         previewUrl,
