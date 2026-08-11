@@ -1,8 +1,6 @@
 <div align="center">
 
 # CLIPCON BETA
-
-### 그 순간의 캐릭터성을, 스티커로.
 <img width="4984" height="2160" alt="image" src="https://github.com/user-attachments/assets/cd655b56-9a06-4427-a574-dde97366a252" />
 
 치지직 클립 링크 하나로 AI가 가장 인상적인 순간을 찾아  
