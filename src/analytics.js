@@ -19,6 +19,12 @@ export function initAnalytics() {
 
   gtag('js', new Date())
   gtag('config', GA_ID, {
+    // gtag는 이벤트를 보낼 때마다 document.location을 dl 파라미터로 직접 붙인다.
+    // 개별 이벤트에만 page_location을 넘겨서는 막을 수 없다. 향상된 측정이
+    // 스스로 만드는 이벤트(스크롤·이탈 클릭·파일 다운로드)는 track()을 거치지도
+    // 않기 때문이다. 그래서 설정 단계에서 기본값을 경로만으로 고정하고,
+    // 라우트가 바뀔 때마다 trackPageView가 gtag('set')으로 갱신한다.
+    page_location: locationFor(window.location.pathname),
     // 라우트 전환은 App에서 직접 잡아 보낸다. 여기서 자동 전송까지 켜두면
     // 첫 화면이 두 번 세어진다. GA 콘솔의 향상된 측정에서 '브라우저 기록 이벤트
     // 기반 페이지 변경'도 함께 꺼야 중복이 완전히 사라진다.
@@ -35,6 +41,12 @@ export function initAnalytics() {
 }
 
 export function trackPageView(path, title) {
+  // set이 먼저다. 이 뒤로 나가는 모든 이벤트가 이 값을 물려받아야 한다.
+  window.gtag?.('set', {
+    page_location: locationFor(path),
+    page_path: path,
+    page_title: title,
+  })
   window.gtag?.('event', 'page_view', {
     page_path: path,
     page_title: title,
