@@ -7,6 +7,7 @@ import ClipPlayer from '../components/ClipPlayer.jsx'
 import { stickerAssets } from '../data.js'
 import { ApiError, createClip, createSticker, downloadMedia, loginUrl, mediaUrl, pollJob } from '../api.js'
 import { useAuth } from '../auth.jsx'
+import { track } from '../analytics.js'
 
 const MAX_SEGMENT = 5
 const PENDING_KEY = 'clipy:pending'
@@ -53,6 +54,15 @@ const stickerFilename = ({ stickerUrl, emotion }) => {
   return label ? `clipcon-${label}.${ext}` : `clipcon-sticker.${ext}`
 }
 
+// 분석에는 코드만 보낸다. err.message는 서버가 정하는 문자열이라 무엇이 실려 올지
+// 통제할 수 없고, 그런 값은 개인정보처리방침이 고지한 국외 이전 항목을 벗어난다.
+// 서버가 구조화된 에러 본문을 주지 못한 경우(5xx, 프록시 실패 등) code가 비는데,
+// 정작 그런 실패야말로 눈에 띄어야 하므로 상태 코드로 대신 채운다.
+const errorCode = (err) => {
+  if (!(err instanceof ApiError)) return 'UNKNOWN'
+  return err.code || `HTTP_${err.status ?? 0}`
+}
+
 // 남은 횟수는 대개 한 자릿수여서 연속 바보다 칸이 나뉜 쪽이 세기 쉽다.
 // 한도가 커지면 칸이 실오라기처럼 얇아지므로 그때만 연속 바로 넘어간다.
 const PIP_LIMIT = 10
@@ -92,6 +102,8 @@ export default function CreatePage() {
   // 켜면 반드시 글자가 들어가고, 끄면 반드시 들어가지 않는다. 서버가 판단을
   // 뒤집을 여지는 없다.
   const [withCaption, setWithCaption] = useState(true)
+  // 클립마다 새로 받는다. 스타일·글자 토글과 달리 reset()에서 해제되는 이유다.
+  const [agreed, setAgreed] = useState(false)
 
   const [clipId, setClipId] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -146,6 +158,9 @@ export default function CreatePage() {
     setStickerStyle(pending.stickerStyle === 'original' ? 'original' : 'character')
     // 저장된 값이 없던 시절의 pending도 켜짐으로 복원된다(기본값과 같다).
     setWithCaption(pending.withCaption !== false)
+    // 동의는 저장된 값이 명시적으로 true일 때만 살린다. 바로 위 withCaption의
+    // `!== false`와 반대 방향인 것은 의도다 — 기록이 없으면 동의하지 않은 것으로 본다.
+    setAgreed(pending.agreed === true)
     setMode(pending.mode === 'animated' ? 'animated' : 'static')
     setStatus('trimming')
   }, [])
@@ -164,6 +179,7 @@ export default function CreatePage() {
     setStatus('loading')
     setProgress(0)
     setStage(null)
+    track('clip_load_start')
 
     const controller = new AbortController()
     pollAbortRef.current = controller
@@ -184,9 +200,11 @@ export default function CreatePage() {
       setDuration(clipResult.duration)
       setClipTitle(clipResult.title || null)
       setRange(rangeAt(0, clipResult.duration))
+      track('clip_load_success', { clip_seconds: Math.round(clipResult.duration ?? 0) })
       setStatus('trimming')
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return
+      track('clip_load_error', { error_code: errorCode(err) })
       setError(err.message || '클립을 불러오지 못했어요.')
       setStatus('idle')
     }
@@ -198,6 +216,11 @@ export default function CreatePage() {
 
   const handleConfirmTrim = async () => {
     if (!clipId) return
+    // 로그인 분기보다 앞이어야 한다. 뒤에 두면 미동의 상태로 Google 로그인에 튕겨나간다.
+    if (!agreed) {
+      setError('약관에 동의해야 스티커를 만들 수 있어요.')
+      return
+    }
     if (authLoading) return
     if (!user) {
       sessionStorage.setItem(PENDING_KEY, JSON.stringify({
@@ -209,17 +232,30 @@ export default function CreatePage() {
         range,
         stickerStyle,
         withCaption,
+        agreed,
         mode,
       }))
+      track('login_start', { source: 'create_confirm' })
       window.location.href = loginUrl('/create')
       return
     }
     if (user.quotaRemaining <= 0) {
+      track('quota_exceeded', { source: 'pre_check' })
       setError(`생성 한도 ${user.quotaLimit}회를 모두 사용했어요.`)
       return
     }
     setError('')
     setDownloadError('')
+
+    // 성공·실패 양쪽에서 같은 조건을 붙여 보내야 전환율을 조건별로 나눠 볼 수 있다.
+    const stickerParams = {
+      sticker_style: stickerStyle,
+      output_mode: mode,
+      with_caption: withCaption,
+      segment_seconds: snap(range.end - range.start),
+    }
+    track('sticker_generate_start', stickerParams)
+
     setStatus('processing')
     setProgress(0)
     setStage(null)
@@ -244,10 +280,14 @@ export default function CreatePage() {
       })
       if (!mountedRef.current) return
       setResult(stickerResult)
+      track('sticker_generate_success', stickerParams)
       setStatus('complete')
       await refresh()
     } catch (err) {
       if (controller.signal.aborted || !mountedRef.current) return
+      const code = errorCode(err)
+      track('sticker_generate_error', { ...stickerParams, error_code: code })
+      if (code === 'QUOTA_EXCEEDED') track('quota_exceeded', { source: 'generate' })
       if (err instanceof ApiError && ['QUOTA_EXCEEDED', 'UNAUTHENTICATED'].includes(err.code)) {
         await refresh()
       }
@@ -262,8 +302,10 @@ export default function CreatePage() {
     setDownloading(true)
     try {
       await downloadMedia(result.stickerUrl, stickerFilename(result))
+      track('sticker_download', { sticker_style: stickerStyle, output_mode: mode })
     } catch (err) {
       if (!mountedRef.current) return
+      track('sticker_download_error', { error_code: errorCode(err) })
       setDownloadError(err.message || '스티커를 내려받지 못했어요.')
     } finally {
       if (mountedRef.current) setDownloading(false)
@@ -285,6 +327,8 @@ export default function CreatePage() {
     setResult(null)
     setDownloading(false)
     setDownloadError('')
+    // 동의는 특정 클립에 대한 권리 진술이라 다른 클립으로 넘어가면 무효다.
+    setAgreed(false)
   }
 
   return (
@@ -405,8 +449,22 @@ export default function CreatePage() {
 
                 {error && <p className="trim-error">{error}</p>}
 
+                {/* 라우터 <Link>를 쓰면 clipId·previewUrl·range가 통째로 날아가
+                    클립 로딩부터 다시 해야 한다. 반드시 새 탭으로 연다. */}
+                <label className="consent-row">
+                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                  <span>
+                    이 클립을 스티커로 만들 권리가 저에게 있고,{' '}
+                    <a href="/terms" target="_blank" rel="noreferrer">이용약관</a>과{' '}
+                    <a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>에 동의해요.
+                  </span>
+                </label>
+                <p className="consent-note">
+                  만드는 동안 클립 영상과 이미지가 Google·OpenAI(미국)로 전송돼요.
+                </p>
+
                 <div className="trim-actions">
-                  <button type="button" className="trim-confirm" onClick={handleConfirmTrim} disabled={authLoading || user?.quotaRemaining === 0}>
+                  <button type="button" className="trim-confirm" onClick={handleConfirmTrim} disabled={authLoading || !agreed || user?.quotaRemaining === 0}>
                     {user ? '이 구간으로 만들기' : 'Google 로그인하고 만들기'} <Icon name="arrow" size={18} />
                   </button>
                 </div>
@@ -467,6 +525,11 @@ export default function CreatePage() {
           </div>
 
           <p className="workspace-note">CLIPCON은 네이버, 치지직, OGQ와 제휴하거나 공식 운영되는 서비스가 아닙니다.</p>
+          <p className="workspace-note">
+            <a href="/terms" target="_blank" rel="noreferrer">이용약관</a>
+            {' · '}
+            <a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
+          </p>
         </div>
       </main>
     </div>

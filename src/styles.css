@@ -489,6 +489,44 @@ footer { padding:58px 0 26px;background:#0f1012;border-top:1px solid rgba(255,25
 
 @keyframes authShimmer { to { background-position: -200% 0; } }
 
+/* 법적 문서(/terms, /privacy). 마케팅 섹션과 달리 오래 읽는 화면이라
+   폭을 좁히고 행간을 넉넉히 준다. */
+.legal { padding: 74px 0 96px; }
+.legal-inner { max-width: 760px; }
+.legal h1 { color: #f2f4f8; font-size: 32px; font-weight: 850; letter-spacing: -.01em; }
+.legal-date { margin-top: 10px; color: var(--mint); font-size: 11px; font-weight: 750; }
+.legal-intro { margin-top: 22px; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.08); color: #aeb5c2; font-size: 13px; line-height: 1.8; }
+.legal-section { margin-top: 38px; }
+.legal-section h2 { color: #e6eaf1; font-size: 16px; font-weight: 800; }
+.legal-section p { margin-top: 12px; color: #99a1af; font-size: 13px; line-height: 1.8; }
+.legal-section ul { margin: 12px 0 0; padding-left: 18px; display: grid; gap: 7px; list-style: disc; }
+.legal-section li { color: #99a1af; font-size: 13px; line-height: 1.8; }
+.legal-section li::marker { color: #4d545f; }
+/* 국외 이전 표는 좁은 화면에서 넘친다. 페이지 대신 표만 가로로 굴린다. */
+.legal-table-wrap { margin-top: 16px; overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.legal-table th, .legal-table td { padding: 11px 13px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; vertical-align: top; line-height: 1.7; }
+.legal-table th { background: rgba(255,255,255,.03); color: #d6dbe4; font-weight: 800; white-space: nowrap; }
+.legal-table td { color: #99a1af; }
+.legal-table tbody tr:last-child th, .legal-table tbody tr:last-child td { border-bottom: 0; }
+.legal-crosslink { margin-top: 46px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.08); color: #6d7582; font-size: 12px; line-height: 1.8; }
+.legal-crosslink a { color: var(--mint); font-weight: 750; }
+.legal-crosslink a:hover { color: var(--mint-soft); }
+
+/* 생성 시점 동의 게이트. .mode-row를 재사용하지 않는 이유는 그쪽이
+   idle 폼용 margin-bottom만 갖고 있어 여기서 위쪽 간격이 0이 되기 때문이다. */
+.consent-row { display: flex; align-items: flex-start; gap: 10px; color: #aeb5c2; font-size: 12px; line-height: 1.7; cursor: pointer; }
+.consent-row input { width: 17px; height: 17px; flex: none; margin: 1px 0 0; accent-color: var(--mint); cursor: pointer; }
+.consent-row input:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.consent-row a { color: var(--mint); font-weight: 750; text-decoration: underline; text-underline-offset: 2px; }
+.consent-row a:hover { color: var(--mint-soft); }
+.consent-note { margin-top: 7px; padding-left: 27px; color: #6d7582; font-size: 10px; line-height: 1.6; }
+.trim-state .consent-row { margin: 18px 0 0; }
+/* 제휴 아님 고지 바로 아래 붙는 약관 링크 줄. 고지와 한 덩어리로 읽히게 간격을 좁힌다. */
+.workspace-note + .workspace-note { margin-top: 8px; }
+.workspace-note a { color: #737b88; }
+.workspace-note a:hover { color: var(--mint); }
+
 @media (max-width: 1050px) {
   .site-header nav + .header-actions { margin-left: auto; }
   .header-user > div { display: none; }
@@ -502,4 +540,13 @@ footer { padding:58px 0 26px;background:#0f1012;border-top:1px solid rgba(255,25
   .header-actions .header-cta { display: none; }
   .quota-label { font-size: 11px; }
   .quota-count { font-size: 11px; }
+  .legal { padding: 52px 0 68px; }
+  .legal h1 { font-size: 25px; }
+  .legal-section { margin-top: 30px; }
+  .legal-section h2 { font-size: 15px; }
+  .legal-intro, .legal-section p, .legal-section li { font-size: 12px; }
+  .legal-table { font-size: 11px; }
+  .legal-table th, .legal-table td { padding: 9px 11px; }
+  .consent-row { font-size: 11px; }
+  .consent-note { padding-left: 0; }
 }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { loginUrl } from '../api.js'
 import { useAuth } from '../auth.jsx'
+import { track } from '../analytics.js'
 import Icon from './Icon.jsx'
 import Logo from './Logo.jsx'
 
@@ -24,7 +25,13 @@ export default function SiteHeader({ variant = 'landing' }) {
       <button type="button" onClick={handleSignOut}>로그아웃</button>
     </div>
   ) : (
-    <a className="header-login" href={loginUrl(`${window.location.pathname}${window.location.search}`)}>Google로 로그인</a>
+    <a
+      className="header-login"
+      href={loginUrl(`${window.location.pathname}${window.location.search}`)}
+      onClick={() => track('login_start', { source: 'header' })}
+    >
+      Google로 로그인
+    </a>
   )
 
   return (
