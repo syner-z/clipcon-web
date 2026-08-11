@@ -92,6 +92,8 @@ export default function CreatePage() {
   // 켜면 반드시 글자가 들어가고, 끄면 반드시 들어가지 않는다. 서버가 판단을
   // 뒤집을 여지는 없다.
   const [withCaption, setWithCaption] = useState(true)
+  // 클립마다 새로 받는다. 스타일·글자 토글과 달리 reset()에서 해제되는 이유다.
+  const [agreed, setAgreed] = useState(false)
 
   const [clipId, setClipId] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -146,6 +148,9 @@ export default function CreatePage() {
     setStickerStyle(pending.stickerStyle === 'original' ? 'original' : 'character')
     // 저장된 값이 없던 시절의 pending도 켜짐으로 복원된다(기본값과 같다).
     setWithCaption(pending.withCaption !== false)
+    // 동의는 저장된 값이 명시적으로 true일 때만 살린다. 바로 위 withCaption의
+    // `!== false`와 반대 방향인 것은 의도다 — 기록이 없으면 동의하지 않은 것으로 본다.
+    setAgreed(pending.agreed === true)
     setMode(pending.mode === 'animated' ? 'animated' : 'static')
     setStatus('trimming')
   }, [])
@@ -198,6 +203,11 @@ export default function CreatePage() {
 
   const handleConfirmTrim = async () => {
     if (!clipId) return
+    // 로그인 분기보다 앞이어야 한다. 뒤에 두면 미동의 상태로 Google 로그인에 튕겨나간다.
+    if (!agreed) {
+      setError('약관에 동의해야 스티커를 만들 수 있어요.')
+      return
+    }
     if (authLoading) return
     if (!user) {
       sessionStorage.setItem(PENDING_KEY, JSON.stringify({
@@ -209,6 +219,7 @@ export default function CreatePage() {
         range,
         stickerStyle,
         withCaption,
+        agreed,
         mode,
       }))
       window.location.href = loginUrl('/create')
@@ -285,6 +296,8 @@ export default function CreatePage() {
     setResult(null)
     setDownloading(false)
     setDownloadError('')
+    // 동의는 특정 클립에 대한 권리 진술이라 다른 클립으로 넘어가면 무효다.
+    setAgreed(false)
   }
 
   return (
@@ -405,8 +418,22 @@ export default function CreatePage() {
 
                 {error && <p className="trim-error">{error}</p>}
 
+                {/* 라우터 <Link>를 쓰면 clipId·previewUrl·range가 통째로 날아가
+                    클립 로딩부터 다시 해야 한다. 반드시 새 탭으로 연다. */}
+                <label className="consent-row">
+                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                  <span>
+                    이 클립을 스티커로 만들 권리가 저에게 있고,{' '}
+                    <a href="/terms" target="_blank" rel="noreferrer">이용약관</a>과{' '}
+                    <a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>에 동의해요.
+                  </span>
+                </label>
+                <p className="consent-note">
+                  만드는 동안 클립 영상과 이미지가 Google·OpenAI(미국)로 전송돼요.
+                </p>
+
                 <div className="trim-actions">
-                  <button type="button" className="trim-confirm" onClick={handleConfirmTrim} disabled={authLoading || user?.quotaRemaining === 0}>
+                  <button type="button" className="trim-confirm" onClick={handleConfirmTrim} disabled={authLoading || !agreed || user?.quotaRemaining === 0}>
                     {user ? '이 구간으로 만들기' : 'Google 로그인하고 만들기'} <Icon name="arrow" size={18} />
                   </button>
                 </div>
@@ -467,6 +494,11 @@ export default function CreatePage() {
           </div>
 
           <p className="workspace-note">CLIPCON은 네이버, 치지직, OGQ와 제휴하거나 공식 운영되는 서비스가 아닙니다.</p>
+          <p className="workspace-note">
+            <a href="/terms" target="_blank" rel="noreferrer">이용약관</a>
+            {' · '}
+            <a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a>
+          </p>
         </div>
       </main>
     </div>
